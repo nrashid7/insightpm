@@ -6,65 +6,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function scrapeProductFeedback(productName: string, website?: string, competitors?: string[]): Promise<string> {
-  const apiKey = Deno.env.get("FIRECRAWL_API_KEY");
-  if (!apiKey) {
-    console.log("No FIRECRAWL_API_KEY, skipping web scraping");
-    return "";
-  }
-
-  const queries = [
-    `"${productName}" review complaints problems`,
-    `"${productName}" feature request wishlist`,
-  ];
-  if (competitors && competitors.length > 0) {
-    queries.push(`"${productName}" vs ${competitors[0]} comparison`);
-  }
-
-  const allContent: string[] = [];
-
-  for (const query of queries) {
-    try {
-      const response = await fetch("https://api.firecrawl.dev/v1/search", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query,
-          limit: 5,
-          scrapeOptions: { formats: ["markdown"] },
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const results = data.data || [];
-        for (const r of results) {
-          const md = r.markdown || r.description || "";
-          if (md) allContent.push(md.slice(0, 2000));
-        }
-      } else {
-        console.error(`Firecrawl search failed for "${query}":`, response.status);
-      }
-    } catch (e) {
-      console.error(`Firecrawl error for "${query}":`, e);
-    }
-  }
-
-  const combined = allContent.join("\n\n---\n\n");
-  // Limit to ~15k chars to stay within AI context
-  return combined.slice(0, 15000);
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { productName, website, competitors } = await req.json();
+    const { productName, website, competitors, sources } = await req.json();
 
     if (!productName) {
       return new Response(
@@ -82,32 +30,59 @@ serve(async (req) => {
       ? competitors.split(",").map((c: string) => c.trim()).filter(Boolean)
       : [];
 
-    // Scrape real feedback from the web
-    console.log("Scraping product feedback...");
-    const scrapedContent = await scrapeProductFeedback(productName, website, competitorList);
-    console.log(`Scraped ${scrapedContent.length} chars of feedback`);
+    // Step 1: Collect feedback via the collect-feedback function
+    console.log("Collecting feedback from multiple sources...");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    const hasScrapedData = scrapedContent.length > 100;
+    const collectRes = await fetch(`${supabaseUrl}/functions/v1/collect-feedback`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${supabaseKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ productName, website, competitors, sources }),
+    });
 
-    const systemPrompt = `You are a product intelligence analyst. Given a product name${hasScrapedData ? " and real user feedback scraped from the web" : ""}, generate a detailed product analysis. Use the analyze_product tool to return structured data.
+    let corpus = "";
+    let totalItems = 0;
+    let sourceBreakdown: { source: string; count: number; status: string }[] = [];
+    let feedbackSamples: { text: string; source: string; title?: string; url?: string; rating?: number }[] = [];
+
+    if (collectRes.ok) {
+      const collectData = await collectRes.json();
+      corpus = collectData.corpus || "";
+      totalItems = collectData.totalItems || 0;
+      sourceBreakdown = collectData.sourceBreakdown || [];
+      feedbackSamples = collectData.feedbackSamples || [];
+      console.log(`Collected ${totalItems} items from ${sourceBreakdown.length} sources`);
+    } else {
+      console.error("collect-feedback failed:", collectRes.status);
+    }
+
+    const hasScrapedData = corpus.length > 100;
+
+    // Step 2: AI Analysis
+    const systemPrompt = `You are a product intelligence analyst for InsightPM. ${hasScrapedData ? "You have real user feedback scraped from multiple internet sources." : "Generate realistic analysis based on your knowledge."} Use the analyze_product tool to return structured data.
 
 Guidelines:
-- ${hasScrapedData ? "Base your analysis primarily on the real scraped feedback data provided" : "Generate realistic analysis based on your knowledge of the product"}
-- Generate complaint data with mention counts (highest first, 4-6 items)
-- Generate feature request data with mention counts and trend direction (5-8 items)
-- Sentiment should be percentages adding to 100
-- Trend data should show 6 months of data
-- Competitor intel should highlight real weaknesses if competitors are provided
-- AI recommendation should be specific and actionable
-- totalFeedback should reflect the rough volume analyzed
-- avgSentiment should be between 1-5
-- sourcesCount should be between 4-12`;
+- ${hasScrapedData ? "Base your analysis primarily on the real scraped feedback data. Extract ACTUAL complaints and feature requests mentioned in the data." : "Generate realistic analysis based on your knowledge of the product"}
+- complaints: 4-8 items, sorted by mention count (highest first)
+- featureRequests: 5-10 items with mention counts and trend direction
+- sentiment: 3 items (Positive, Neutral, Negative) as percentages adding to 100
+- trendData: 6 months of data
+- competitors: highlight real weaknesses
+- aiRecommendation: specific, actionable, 2-3 sentences
+- opportunityScore: 5-8 product opportunities ranked by score (1-100), with mention counts
+- totalFeedback should reflect the actual volume analyzed (${totalItems} items collected)
+- avgSentiment: 1-5 scale
+- sourcesCount: ${sourceBreakdown.filter((s) => s.status === "success").length || "4-12"}`;
 
     const userPrompt = `Analyze this product:
 Product: ${productName}
 ${website ? `Website: ${website}` : ""}
 ${competitorList.length > 0 ? `Competitors: ${competitorList.join(", ")}` : ""}
-${hasScrapedData ? `\n--- REAL USER FEEDBACK FROM WEB ---\n${scrapedContent}\n--- END FEEDBACK ---` : ""}
+${hasScrapedData ? `\n--- REAL USER FEEDBACK FROM ${sourceBreakdown.filter((s) => s.count > 0).map((s) => s.source.toUpperCase()).join(", ")} ---\n${corpus}\n--- END FEEDBACK ---` : ""}
 
 Provide a comprehensive product intelligence analysis.`;
 
@@ -188,13 +163,25 @@ Provide a comprehensive product intelligence analysis.`;
                       required: ["name", "weakness", "sentiment"],
                     },
                   },
+                  opportunityScore: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        score: { type: "number" },
+                        mentions: { type: "number" },
+                      },
+                      required: ["name", "score", "mentions"],
+                    },
+                  },
                   aiRecommendation: { type: "string" },
                   sourcesCount: { type: "number" },
                 },
                 required: [
                   "productName", "totalFeedback", "avgSentiment", "topComplaintsCount",
                   "topFeatureRequestCount", "complaints", "sentiment", "trendData",
-                  "featureRequests", "competitors", "aiRecommendation", "sourcesCount",
+                  "featureRequests", "competitors", "opportunityScore", "aiRecommendation", "sourcesCount",
                 ],
                 additionalProperties: false,
               },
@@ -233,16 +220,23 @@ Provide a comprehensive product intelligence analysis.`;
 
     const analysisData = JSON.parse(toolCall.function.arguments);
 
+    // Add sentiment colors
     const sentimentColors: Record<string, string> = {
       Positive: "hsl(150, 60%, 50%)",
       Neutral: "hsl(215, 20%, 55%)",
       Negative: "hsl(0, 72%, 55%)",
     };
-
     analysisData.sentiment = analysisData.sentiment.map((s: { name: string; value: number }) => ({
       ...s,
       color: sentimentColors[s.name] || "hsl(215, 20%, 55%)",
     }));
+
+    // Attach source breakdown and feedback samples
+    analysisData.sourceBreakdown = sourceBreakdown.map((s) => ({
+      source: s.source,
+      count: s.count,
+    }));
+    analysisData.feedbackSamples = feedbackSamples;
 
     return new Response(JSON.stringify(analysisData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
