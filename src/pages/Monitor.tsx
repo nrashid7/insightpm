@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Zap, Bell, Plus, Trash2, Play, Pause, RefreshCw, AlertTriangle,
   TrendingUp, TrendingDown, Layers, MessageSquare, LogOut, History, Check,
+  ExternalLink,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
