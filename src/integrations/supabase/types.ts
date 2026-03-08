@@ -47,6 +47,97 @@ export type Database = {
         }
         Relationships: []
       }
+      analysis_sources: {
+        Row: {
+          analysis_id: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          items_count: number | null
+          source: string
+          status: string
+        }
+        Insert: {
+          analysis_id: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          items_count?: number | null
+          source: string
+          status?: string
+        }
+        Update: {
+          analysis_id?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          items_count?: number | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_sources_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_items: {
+        Row: {
+          analysis_id: string | null
+          collected_at: string
+          id: string
+          metadata: Json | null
+          product_name: string
+          rating: number | null
+          sentiment: string | null
+          source: string
+          source_timestamp: string | null
+          text: string
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          analysis_id?: string | null
+          collected_at?: string
+          id?: string
+          metadata?: Json | null
+          product_name: string
+          rating?: number | null
+          sentiment?: string | null
+          source: string
+          source_timestamp?: string | null
+          text: string
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          analysis_id?: string | null
+          collected_at?: string
+          id?: string
+          metadata?: Json | null
+          product_name?: string
+          rating?: number | null
+          sentiment?: string | null
+          source?: string
+          source_timestamp?: string | null
+          text?: string
+          title?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_items_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
