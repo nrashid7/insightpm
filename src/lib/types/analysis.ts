@@ -79,4 +79,5 @@ export interface AnalysisInput {
   competitors?: string;
   sources?: string[];
   useCache?: boolean;
+  customFeedback?: string;
 }

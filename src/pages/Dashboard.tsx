@@ -58,7 +58,7 @@ const Dashboard = () => {
       loadSavedAnalysis(analysisId);
     } else if (initialProduct) {
       const sources = initialSources ? initialSources.split(",") : undefined;
-      runAnalysis(initialProduct, initialWebsite, initialCompetitors, sources);
+      runAnalysis(initialProduct, initialWebsite, initialCompetitors, sources, initialCustomFeedback || undefined);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -84,7 +84,7 @@ const Dashboard = () => {
     setIsLoading(false);
   };
 
-  const runAnalysis = async (name: string, website?: string, competitors?: string, sources?: string[]) => {
+  const runAnalysis = async (name: string, website?: string, competitors?: string, sources?: string[], customFeedback?: string) => {
     setIsLoading(true);
     setError(null);
     setIsSaved(false);
@@ -95,6 +95,7 @@ const Dashboard = () => {
         website: website || undefined,
         competitors: competitors || undefined,
         sources,
+        customFeedback,
       });
       setData(result);
       setProductName(result.productName);
