@@ -26,6 +26,26 @@ export interface CompetitorIntel {
   sentiment: number;
 }
 
+export interface OpportunityScore {
+  name: string;
+  score: number;
+  mentions: number;
+}
+
+export interface SourceBreakdown {
+  source: string;
+  count: number;
+}
+
+export interface FeedbackSample {
+  text: string;
+  source: string;
+  title?: string;
+  url?: string;
+  rating?: number;
+  sentiment?: string;
+}
+
 export interface AnalysisResult {
   productName: string;
   totalFeedback: number;
@@ -39,10 +59,15 @@ export interface AnalysisResult {
   competitors: CompetitorIntel[];
   aiRecommendation: string;
   sourcesCount: number;
+  // New fields
+  opportunityScore?: OpportunityScore[];
+  sourceBreakdown?: SourceBreakdown[];
+  feedbackSamples?: FeedbackSample[];
 }
 
 export interface AnalysisInput {
   productName: string;
   website?: string;
   competitors?: string;
+  sources?: string[];
 }

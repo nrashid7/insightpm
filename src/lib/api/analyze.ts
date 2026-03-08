@@ -3,7 +3,12 @@ import type { AnalysisInput, AnalysisResult } from "@/lib/types/analysis";
 
 export async function analyzeProduct(input: AnalysisInput): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke("analyze-product", {
-    body: input,
+    body: {
+      productName: input.productName,
+      website: input.website,
+      competitors: input.competitors,
+      sources: input.sources,
+    },
   });
 
   if (error) {

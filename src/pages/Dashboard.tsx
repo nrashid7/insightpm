@@ -3,7 +3,11 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Search, ArrowLeft, TrendingDown, TrendingUp, MessageSquare, Users, Star, AlertTriangle, Save, Download, History, Share2, FileText, LogOut } from "lucide-react";
+import {
+  Zap, Search, TrendingDown, TrendingUp, MessageSquare, Users, Star,
+  AlertTriangle, Save, Download, History, Share2, FileText, LogOut,
+  ExternalLink, ChevronDown, ChevronUp, Target,
+} from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Tooltip } from "recharts";
 import { analyzeProduct } from "@/lib/api/analyze";
@@ -11,12 +15,25 @@ import type { AnalysisResult } from "@/lib/types/analysis";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
+
+const SOURCE_LABELS: Record<string, { label: string; icon: string }> = {
+  hackernews: { label: "Hacker News", icon: "🟠" },
+  github: { label: "GitHub", icon: "🐙" },
+  stackoverflow: { label: "Stack Overflow", icon: "📚" },
+  appstore: { label: "App Store", icon: "🍎" },
+  reddit: { label: "Reddit", icon: "🔴" },
+  trustpilot: { label: "Trustpilot", icon: "⭐" },
+  web: { label: "Web", icon: "🌐" },
+};
 
 const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const initialProduct = searchParams.get("product") || "";
   const initialWebsite = searchParams.get("website") || "";
   const initialCompetitors = searchParams.get("competitors") || "";
+  const initialSources = searchParams.get("sources") || "";
   const analysisId = searchParams.get("analysisId") || "";
 
   const [productName, setProductName] = useState(initialProduct);
@@ -34,7 +51,8 @@ const Dashboard = () => {
     if (analysisId) {
       loadSavedAnalysis(analysisId);
     } else if (initialProduct) {
-      runAnalysis(initialProduct, initialWebsite, initialCompetitors);
+      const sources = initialSources ? initialSources.split(",") : undefined;
+      runAnalysis(initialProduct, initialWebsite, initialCompetitors, sources);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -60,7 +78,7 @@ const Dashboard = () => {
     setIsLoading(false);
   };
 
-  const runAnalysis = async (name: string, website?: string, competitors?: string) => {
+  const runAnalysis = async (name: string, website?: string, competitors?: string, sources?: string[]) => {
     setIsLoading(true);
     setError(null);
     setIsSaved(false);
@@ -70,6 +88,7 @@ const Dashboard = () => {
         productName: name,
         website: website || undefined,
         competitors: competitors || undefined,
+        sources,
       });
       setData(result);
       setProductName(result.productName);
@@ -134,6 +153,7 @@ const Dashboard = () => {
       ...data.featureRequests.map((f) => ["Feature Request", f.name, f.mentions.toString()]),
       ...data.sentiment.map((s) => ["Sentiment", s.name, `${s.value}%`]),
       ...data.competitors.map((c) => ["Competitor", c.name, `${c.sentiment}/5 - ${c.weakness}`]),
+      ...(data.opportunityScore || []).map((o) => ["Opportunity", o.name, `Score: ${o.score}, Mentions: ${o.mentions}`]),
       ["Recommendation", data.aiRecommendation, ""],
     ];
     const csv = rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -257,6 +277,13 @@ const LoadingSkeleton = ({ productName }: { productName: string }) => (
         Analyzing: <span className="text-gradient-primary">{productName}</span>
       </h1>
       <p className="text-sm text-muted-foreground">Scanning feedback sources and generating insights...</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {["Hacker News", "GitHub", "Stack Overflow", "App Store", "Reddit", "Trustpilot", "Web"].map((s, i) => (
+          <span key={s} className="text-xs px-2.5 py-1 rounded-full bg-secondary border border-border text-muted-foreground animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}>
+            Scanning {s}...
+          </span>
+        ))}
+      </div>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
@@ -283,6 +310,7 @@ interface AnalysisResultsProps {
 
 const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, isSaving, isSaved, isLoggedIn, isPublic, hasAnalysisId }: AnalysisResultsProps) => {
   const maxFeatureMentions = Math.max(...data.featureRequests.map((f) => f.mentions), 1);
+  const [samplesOpen, setSamplesOpen] = useState(false);
 
   return (
     <>
@@ -336,6 +364,27 @@ const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, isSa
           </motion.div>
         ))}
       </div>
+
+      {/* Source Breakdown */}
+      {data.sourceBreakdown && data.sourceBreakdown.length > 0 && (
+        <motion.div className="mb-8 rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Sources Scanned</h3>
+          <div className="flex flex-wrap gap-2">
+            {data.sourceBreakdown.map((s) => {
+              const info = SOURCE_LABELS[s.source] || { label: s.source, icon: "📄" };
+              return (
+                <div key={s.source} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border">
+                  <span className="text-sm">{info.icon}</span>
+                  <span className="text-xs text-foreground font-medium">{info.label}</span>
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-1">
+                    {s.count}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Charts grid */}
       <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
@@ -414,6 +463,41 @@ const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, isSa
         </motion.div>
       </div>
 
+      {/* Opportunity Scores */}
+      {data.opportunityScore && data.opportunityScore.length > 0 && (
+        <motion.div className="mb-8 rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+          <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
+            <Target className="w-4 h-4 text-primary" /> Product Opportunities
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">Ranked by opportunity score based on demand, complaints, and sentiment</p>
+          <div className="space-y-3">
+            {data.opportunityScore.sort((a, b) => b.score - a.score).map((opp, i) => {
+              const scoreLevel = opp.score >= 70 ? "High" : opp.score >= 40 ? "Medium" : "Low";
+              const scoreColor = opp.score >= 70 ? "text-chart-4" : opp.score >= 40 ? "text-accent" : "text-muted-foreground";
+              return (
+                <div key={opp.name} className="flex items-center gap-4">
+                  <span className="text-xs font-mono text-muted-foreground w-4">{i + 1}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-foreground">{opp.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{opp.mentions.toLocaleString()} mentions</span>
+                        <Badge variant="outline" className={`text-[10px] ${scoreColor}`}>
+                          {scoreLevel} ({opp.score})
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${opp.score}%` }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
       {/* AI Recommendation */}
       <motion.div className="rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
         <div className="flex items-start gap-3">
@@ -447,6 +531,48 @@ const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, isSa
           ))}
         </div>
       </motion.div>
+
+      {/* Feedback Samples */}
+      {data.feedbackSamples && data.feedbackSamples.length > 0 && (
+        <motion.div className="mt-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+          <Collapsible open={samplesOpen} onOpenChange={setSamplesOpen}>
+            <CollapsibleTrigger className="w-full rounded-xl border border-border bg-card/50 p-4 sm:p-6 flex items-center justify-between hover:bg-card/70 transition-colors">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                Real Feedback Samples ({data.feedbackSamples.length})
+              </h3>
+              {samplesOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="mt-2 space-y-2">
+                {data.feedbackSamples.map((sample, i) => {
+                  const info = SOURCE_LABELS[sample.source] || { label: sample.source, icon: "📄" };
+                  return (
+                    <div key={i} className="rounded-lg border border-border bg-card/30 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs">{info.icon}</span>
+                        <Badge variant="secondary" className="text-[10px]">{info.label}</Badge>
+                        {sample.rating && (
+                          <span className="text-xs text-accent">{"★".repeat(sample.rating)}</span>
+                        )}
+                        {sample.url && (
+                          <a href={sample.url} target="_blank" rel="noopener noreferrer" className="ml-auto text-muted-foreground hover:text-primary">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                      {sample.title && (
+                        <p className="text-xs font-medium text-foreground mb-1">{sample.title}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{sample.text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </motion.div>
+      )}
     </>
   );
 };

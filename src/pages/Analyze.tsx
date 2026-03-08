@@ -4,17 +4,35 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Globe, Users, Package } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowRight, Globe, Users, Package, Database } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import { useToast } from "@/hooks/use-toast";
+
+const ALL_SOURCES = [
+  { id: "hackernews", label: "Hacker News", icon: "🟠" },
+  { id: "github", label: "GitHub Issues", icon: "🐙" },
+  { id: "stackoverflow", label: "Stack Overflow", icon: "📚" },
+  { id: "appstore", label: "App Store", icon: "🍎" },
+  { id: "reddit", label: "Reddit", icon: "🔴" },
+  { id: "trustpilot", label: "Trustpilot", icon: "⭐" },
+  { id: "web", label: "General Web", icon: "🌐" },
+];
 
 const Analyze = () => {
   const [productName, setProductName] = useState("");
   const [website, setWebsite] = useState("");
   const [competitors, setCompetitors] = useState("");
+  const [selectedSources, setSelectedSources] = useState<string[]>(ALL_SOURCES.map((s) => s.id));
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const toggleSource = (sourceId: string) => {
+    setSelectedSources((prev) =>
+      prev.includes(sourceId) ? prev.filter((s) => s !== sourceId) : [...prev, sourceId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,12 +46,23 @@ const Analyze = () => {
       return;
     }
 
+    if (selectedSources.length === 0) {
+      toast({
+        title: "Select at least one source",
+        description: "Choose at least one data source for the analysis.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
-    // Navigate to dashboard with query params — dashboard will trigger the analysis
     const params = new URLSearchParams({ product: productName.trim() });
     if (website.trim()) params.set("website", website.trim());
     if (competitors.trim()) params.set("competitors", competitors.trim());
+    if (selectedSources.length < ALL_SOURCES.length) {
+      params.set("sources", selectedSources.join(","));
+    }
 
     navigate(`/dashboard?${params.toString()}`);
   };
@@ -42,7 +71,6 @@ const Analyze = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      {/* Form */}
       <div className="flex-1 flex items-center justify-center pt-16 px-6">
         <motion.div
           className="w-full max-w-lg"
@@ -107,6 +135,45 @@ const Analyze = () => {
               />
             </div>
 
+            {/* Data Sources */}
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2 text-foreground">
+                <Database className="w-4 h-4 text-muted-foreground" />
+                Data Sources
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {ALL_SOURCES.map((source) => (
+                  <label
+                    key={source.id}
+                    className="flex items-center gap-2 p-2.5 rounded-lg border border-border bg-secondary/50 cursor-pointer hover:bg-secondary transition-colors"
+                  >
+                    <Checkbox
+                      checked={selectedSources.includes(source.id)}
+                      onCheckedChange={() => toggleSource(source.id)}
+                    />
+                    <span className="text-sm">{source.icon}</span>
+                    <span className="text-sm text-foreground">{source.label}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedSources(ALL_SOURCES.map((s) => s.id))}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSources([])}
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  Clear all
+                </button>
+              </div>
+            </div>
+
             <Button
               type="submit"
               variant="hero"
@@ -120,7 +187,7 @@ const Analyze = () => {
           </form>
 
           <p className="text-xs text-muted-foreground text-center mt-6">
-            Analysis typically takes 15–30 seconds. We scan Reddit, App Store reviews, and more.
+            Analysis typically takes 15–30 seconds. We scan {selectedSources.length} source{selectedSources.length !== 1 ? "s" : ""} across the internet.
           </p>
         </motion.div>
       </div>
