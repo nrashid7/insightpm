@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { productName, website, competitors, sources } = await req.json();
+    const { productName, website, competitors, sources, useCache } = await req.json();
 
     if (!productName) {
       return new Response(
@@ -22,45 +23,129 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
 
     const competitorList = competitors
       ? competitors.split(",").map((c: string) => c.trim()).filter(Boolean)
       : [];
 
-    // Step 1: Collect feedback via the collect-feedback function
-    console.log("Collecting feedback from multiple sources...");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    const collectRes = await fetch(`${supabaseUrl}/functions/v1/collect-feedback`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${supabaseKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ productName, website, competitors, sources }),
-    });
-
     let corpus = "";
     let totalItems = 0;
     let sourceBreakdown: { source: string; count: number; status: string }[] = [];
     let feedbackSamples: { text: string; source: string; title?: string; url?: string; rating?: number }[] = [];
+    let clusters: { name: string; count: number; avgSentiment: string; samples: string[] }[] = [];
+    let usedCache = false;
 
-    if (collectRes.ok) {
-      const collectData = await collectRes.json();
-      corpus = collectData.corpus || "";
-      totalItems = collectData.totalItems || 0;
-      sourceBreakdown = collectData.sourceBreakdown || [];
-      feedbackSamples = collectData.feedbackSamples || [];
-      console.log(`Collected ${totalItems} items from ${sourceBreakdown.length} sources`);
-    } else {
-      console.error("collect-feedback failed:", collectRes.status);
+    // Check for cached data if requested
+    if (useCache) {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: cachedItems, error: cacheErr } = await supabase
+        .from("feedback_items")
+        .select("id, text, title, source, rating, url, sentiment, cluster, quality_score, classified_at")
+        .eq("product_name", productName)
+        .gte("collected_at", oneDayAgo)
+        .neq("sentiment", "filtered")
+        .limit(500);
+
+      if (!cacheErr && cachedItems && cachedItems.length > 20) {
+        console.log(`Using cached data: ${cachedItems.length} items`);
+        usedCache = true;
+        totalItems = cachedItems.length;
+
+        // Build corpus from cached items
+        corpus = cachedItems
+          .map((item) => `[${item.source}] ${item.title ? item.title + ": " : ""}${item.text}`)
+          .join("\n\n---\n\n")
+          .slice(0, 25000);
+
+        // Build source breakdown from cached
+        const sourceCounts: Record<string, number> = {};
+        for (const item of cachedItems) {
+          sourceCounts[item.source] = (sourceCounts[item.source] || 0) + 1;
+        }
+        sourceBreakdown = Object.entries(sourceCounts).map(([source, count]) => ({
+          source, count, status: "success",
+        }));
+
+        feedbackSamples = cachedItems.slice(0, 20).map((item) => ({
+          text: (item.text || "").slice(0, 300),
+          source: item.source,
+          title: item.title || undefined,
+          url: item.url || undefined,
+          rating: item.rating || undefined,
+        }));
+
+        // Build clusters from classified items
+        const clusterMap = new Map<string, { count: number; sentiments: string[]; samples: string[] }>();
+        for (const item of cachedItems) {
+          if (!item.cluster) continue;
+          if (!clusterMap.has(item.cluster)) {
+            clusterMap.set(item.cluster, { count: 0, sentiments: [], samples: [] });
+          }
+          const entry = clusterMap.get(item.cluster)!;
+          entry.count++;
+          if (item.sentiment) entry.sentiments.push(item.sentiment);
+          if (entry.samples.length < 2) entry.samples.push((item.text || "").slice(0, 200));
+        }
+        clusters = Array.from(clusterMap.entries())
+          .map(([name, data]) => {
+            const sentimentCounts: Record<string, number> = {};
+            for (const s of data.sentiments) sentimentCounts[s] = (sentimentCounts[s] || 0) + 1;
+            const dominant = Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "neutral";
+            return { name, count: data.count, avgSentiment: dominant, samples: data.samples };
+          })
+          .sort((a, b) => b.count - a.count);
+      }
+    }
+
+    // Step 1: Collect feedback (if not using cache)
+    if (!usedCache) {
+      console.log("Collecting feedback from multiple sources...");
+      const collectRes = await fetch(`${supabaseUrl}/functions/v1/collect-feedback`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${supabaseAnonKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ productName, website, competitors, sources }),
+      });
+
+      if (collectRes.ok) {
+        const collectData = await collectRes.json();
+        corpus = collectData.corpus || "";
+        totalItems = collectData.totalItems || 0;
+        sourceBreakdown = collectData.sourceBreakdown || [];
+        feedbackSamples = collectData.feedbackSamples || [];
+        console.log(`Collected ${totalItems} items from ${sourceBreakdown.length} sources`);
+      } else {
+        console.error("collect-feedback failed:", collectRes.status);
+      }
+
+      // Step 1.5: Classify feedback if we have an analysis context
+      // We call classify-feedback to get clusters even without a saved analysisId
+      // For now, we pass the feedback through the classifier inline
+      if (totalItems > 0) {
+        try {
+          // Create a temporary analysis record to store feedback for classification
+          // Or classify inline - for performance, let's classify inline with the main AI call
+          console.log("Skipping separate classification - will include cluster analysis in main AI call");
+        } catch (e) {
+          console.error("Classification step error:", e);
+        }
+      }
     }
 
     const hasScrapedData = corpus.length > 100;
+
+    // Build cluster context for prompt
+    const clusterContext = clusters.length > 0
+      ? `\nExisting cluster analysis:\n${clusters.slice(0, 15).map((c) => `- "${c.name}": ${c.count} items, dominant sentiment: ${c.avgSentiment}`).join("\n")}`
+      : "";
 
     // Step 2: AI Analysis
     const systemPrompt = `You are a product intelligence analyst for InsightPM. ${hasScrapedData ? "You have real user feedback scraped from multiple internet sources." : "Generate realistic analysis based on your knowledge."} Use the analyze_product tool to return structured data.
@@ -74,6 +159,7 @@ Guidelines:
 - competitors: highlight real weaknesses
 - aiRecommendation: specific, actionable, 2-3 sentences
 - opportunityScore: 5-8 product opportunities ranked by score (1-100), with mention counts
+- clusters: 5-12 feedback clusters grouping similar themes. Each cluster has a name, count, avgSentiment (dominant sentiment label), and 1-2 sample quotes from the feedback
 - totalFeedback should reflect the actual volume analyzed (${totalItems} items collected)
 - avgSentiment: 1-5 scale
 - sourcesCount: ${sourceBreakdown.filter((s) => s.status === "success").length || "4-12"}`;
@@ -82,9 +168,10 @@ Guidelines:
 Product: ${productName}
 ${website ? `Website: ${website}` : ""}
 ${competitorList.length > 0 ? `Competitors: ${competitorList.join(", ")}` : ""}
+${clusterContext}
 ${hasScrapedData ? `\n--- REAL USER FEEDBACK FROM ${sourceBreakdown.filter((s) => s.count > 0).map((s) => s.source.toUpperCase()).join(", ")} ---\n${corpus}\n--- END FEEDBACK ---` : ""}
 
-Provide a comprehensive product intelligence analysis.`;
+Provide a comprehensive product intelligence analysis with feedback clusters.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -175,13 +262,27 @@ Provide a comprehensive product intelligence analysis.`;
                       required: ["name", "score", "mentions"],
                     },
                   },
+                  clusters: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: { type: "string" },
+                        count: { type: "number" },
+                        avgSentiment: { type: "string" },
+                        samples: { type: "array", items: { type: "string" } },
+                      },
+                      required: ["name", "count", "avgSentiment", "samples"],
+                    },
+                  },
                   aiRecommendation: { type: "string" },
                   sourcesCount: { type: "number" },
                 },
                 required: [
                   "productName", "totalFeedback", "avgSentiment", "topComplaintsCount",
                   "topFeatureRequestCount", "complaints", "sentiment", "trendData",
-                  "featureRequests", "competitors", "opportunityScore", "aiRecommendation", "sourcesCount",
+                  "featureRequests", "competitors", "opportunityScore", "clusters",
+                  "aiRecommendation", "sourcesCount",
                 ],
                 additionalProperties: false,
               },
@@ -237,6 +338,11 @@ Provide a comprehensive product intelligence analysis.`;
       count: s.count,
     }));
     analysisData.feedbackSamples = feedbackSamples;
+
+    // If we had pre-computed clusters from cache, prefer those over AI-generated ones
+    if (usedCache && clusters.length > 0) {
+      analysisData.clusters = clusters;
+    }
 
     return new Response(JSON.stringify(analysisData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
