@@ -3,34 +3,63 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Search, ArrowLeft, TrendingDown, TrendingUp, MessageSquare, Users, Star, AlertTriangle } from "lucide-react";
+import { Zap, Search, ArrowLeft, TrendingDown, TrendingUp, MessageSquare, Users, Star, AlertTriangle, Save, Download, History } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Tooltip } from "recharts";
 import { analyzeProduct } from "@/lib/api/analyze";
 import type { AnalysisResult } from "@/lib/types/analysis";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const initialProduct = searchParams.get("product") || "";
   const initialWebsite = searchParams.get("website") || "";
   const initialCompetitors = searchParams.get("competitors") || "";
+  const analysisId = searchParams.get("analysisId") || "";
 
   const [productName, setProductName] = useState(initialProduct);
   const [data, setData] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (initialProduct) {
+    if (analysisId) {
+      loadSavedAnalysis(analysisId);
+    } else if (initialProduct) {
       runAnalysis(initialProduct, initialWebsite, initialCompetitors);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loadSavedAnalysis = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    const { data: row, error: err } = await supabase
+      .from("analyses")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (err || !row) {
+      setError("Could not load saved analysis");
+      toast({ title: "Load failed", description: err?.message || "Not found", variant: "destructive" });
+    } else {
+      setData(row.results as unknown as AnalysisResult);
+      setProductName(row.product_name);
+      setIsSaved(true);
+    }
+    setIsLoading(false);
+  };
+
   const runAnalysis = async (name: string, website?: string, competitors?: string) => {
     setIsLoading(true);
     setError(null);
+    setIsSaved(false);
     try {
       const result = await analyzeProduct({
         productName: name,
@@ -48,6 +77,48 @@ const Dashboard = () => {
     }
   };
 
+  const handleSave = async () => {
+    if (!user || !data) {
+      toast({ title: "Sign in to save", description: "Create an account to save analyses.", variant: "destructive" });
+      return;
+    }
+    setIsSaving(true);
+    const { error: err } = await supabase.from("analyses").insert([{
+      user_id: user.id,
+      product_name: data.productName,
+      website: initialWebsite || null,
+      competitors: initialCompetitors || null,
+      results: JSON.parse(JSON.stringify(data)),
+    }]);
+    if (err) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } else {
+      setIsSaved(true);
+      toast({ title: "Analysis saved!" });
+    }
+    setIsSaving(false);
+  };
+
+  const handleExportCSV = () => {
+    if (!data) return;
+    const rows = [
+      ["Section", "Name", "Value"],
+      ...data.complaints.map((c) => ["Complaint", c.name, c.mentions.toString()]),
+      ...data.featureRequests.map((f) => ["Feature Request", f.name, f.mentions.toString()]),
+      ...data.sentiment.map((s) => ["Sentiment", s.name, `${s.value}%`]),
+      ...data.competitors.map((c) => ["Competitor", c.name, `${c.sentiment}/5 - ${c.weakness}`]),
+      ["Recommendation", data.aiRecommendation, ""],
+    ];
+    const csv = rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${data.productName}-analysis.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (productName.trim()) {
@@ -57,7 +128,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar */}
       <header className="border-b border-border h-14 flex items-center px-6 glass sticky top-0 z-50">
         <Link to="/" className="flex items-center gap-2 mr-6">
           <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -79,24 +149,33 @@ const Dashboard = () => {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
+          {user && (
+            <Link to="/history">
+              <Button variant="ghost" size="sm" className="text-muted-foreground">
+                <History className="w-4 h-4 mr-1" /> History
+              </Button>
+            </Link>
+          )}
           <Link to="/analyze">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              New Analysis
-            </Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground">New Analysis</Button>
           </Link>
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back
-            </Button>
-          </Link>
+          {user ? (
+            <Link to="/history">
+              <Button variant="ghost" size="sm" className="text-muted-foreground">
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/auth">
+              <Button variant="ghost" size="sm" className="text-primary">Sign In</Button>
+            </Link>
+          )}
         </div>
       </header>
 
       <main className="container mx-auto px-6 py-8">
-        {/* Loading State */}
         {isLoading && <LoadingSkeleton productName={productName} />}
 
-        {/* Error State */}
         {error && !isLoading && (
           <div className="text-center py-20">
             <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
@@ -108,7 +187,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Empty State */}
         {!data && !isLoading && !error && (
           <div className="text-center py-20">
             <Zap className="w-12 h-12 text-primary mx-auto mb-4" />
@@ -120,8 +198,16 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Results */}
-        {data && !isLoading && <AnalysisResults data={data} />}
+        {data && !isLoading && (
+          <AnalysisResults
+            data={data}
+            onSave={handleSave}
+            onExportCSV={handleExportCSV}
+            isSaving={isSaving}
+            isSaved={isSaved}
+            isLoggedIn={!!user}
+          />
+        )}
       </main>
     </div>
   );
@@ -136,32 +222,52 @@ const LoadingSkeleton = ({ productName }: { productName: string }) => (
       <p className="text-sm text-muted-foreground">Scanning feedback sources and generating insights...</p>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      {[1, 2, 3, 4].map((i) => (
-        <Skeleton key={i} className="h-24 rounded-xl" />
-      ))}
+      {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
     </div>
     <div className="grid lg:grid-cols-2 gap-6 mb-8">
-      {[1, 2, 3, 4].map((i) => (
-        <Skeleton key={i} className="h-72 rounded-xl" />
-      ))}
+      {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-72 rounded-xl" />)}
     </div>
     <Skeleton className="h-32 rounded-xl" />
   </>
 );
 
-const AnalysisResults = ({ data }: { data: AnalysisResult }) => {
+interface AnalysisResultsProps {
+  data: AnalysisResult;
+  onSave: () => void;
+  onExportCSV: () => void;
+  isSaving: boolean;
+  isSaved: boolean;
+  isLoggedIn: boolean;
+}
+
+const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLoggedIn }: AnalysisResultsProps) => {
   const maxFeatureMentions = Math.max(...data.featureRequests.map((f) => f.mentions), 1);
 
   return (
     <>
-      {/* Header */}
-      <motion.div className="mb-8" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold text-foreground mb-1">
-          Analysis: <span className="text-gradient-primary">{data.productName}</span>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {data.totalFeedback.toLocaleString()} feedback items analyzed from {data.sourcesCount} sources
-        </p>
+      {/* Header + actions */}
+      <motion.div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground mb-1">
+            Analysis: <span className="text-gradient-primary">{data.productName}</span>
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {data.totalFeedback.toLocaleString()} feedback items analyzed from {data.sourcesCount} sources
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {isLoggedIn && !isSaved && (
+            <Button variant="outline" size="sm" onClick={onSave} disabled={isSaving}>
+              <Save className="w-4 h-4 mr-1" /> {isSaving ? "Saving..." : "Save"}
+            </Button>
+          )}
+          {isSaved && (
+            <span className="text-xs text-primary font-medium">✓ Saved</span>
+          )}
+          <Button variant="outline" size="sm" onClick={onExportCSV}>
+            <Download className="w-4 h-4 mr-1" /> CSV
+          </Button>
+        </div>
       </motion.div>
 
       {/* Stat cards */}
@@ -184,11 +290,9 @@ const AnalysisResults = ({ data }: { data: AnalysisResult }) => {
 
       {/* Charts grid */}
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        {/* Complaints chart */}
         <motion.div className="rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-accent" />
-            Top Complaints
+            <AlertTriangle className="w-4 h-4 text-accent" /> Top Complaints
           </h3>
           <p className="text-xs text-muted-foreground mb-4">By mention count across all sources</p>
           <ResponsiveContainer width="100%" height={220}>
@@ -200,7 +304,6 @@ const AnalysisResults = ({ data }: { data: AnalysisResult }) => {
           </ResponsiveContainer>
         </motion.div>
 
-        {/* Sentiment pie */}
         <motion.div className="rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           <h3 className="text-sm font-semibold text-foreground mb-1">Sentiment Breakdown</h3>
           <p className="text-xs text-muted-foreground mb-4">Overall sentiment distribution</p>
@@ -208,9 +311,7 @@ const AnalysisResults = ({ data }: { data: AnalysisResult }) => {
             <ResponsiveContainer width={160} height={160}>
               <PieChart>
                 <Pie data={data.sentiment} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={70} strokeWidth={0}>
-                  {data.sentiment.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
+                  {data.sentiment.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
@@ -226,11 +327,9 @@ const AnalysisResults = ({ data }: { data: AnalysisResult }) => {
           </div>
         </motion.div>
 
-        {/* Feature requests trend */}
         <motion.div className="rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
           <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-chart-4" />
-            Feature Request Trend
+            <TrendingUp className="w-4 h-4 text-chart-4" /> Feature Request Trend
           </h3>
           <p className="text-xs text-muted-foreground mb-4">Monthly request volume</p>
           <ResponsiveContainer width="100%" height={180}>
@@ -243,11 +342,9 @@ const AnalysisResults = ({ data }: { data: AnalysisResult }) => {
           </ResponsiveContainer>
         </motion.div>
 
-        {/* Competitor table */}
         <motion.div className="rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
           <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
-            <Users className="w-4 h-4 text-chart-5" />
-            Competitor Intel
+            <Users className="w-4 h-4 text-chart-5" /> Competitor Intel
           </h3>
           <p className="text-xs text-muted-foreground mb-4">Key competitor weaknesses</p>
           <div className="space-y-3">
@@ -262,7 +359,7 @@ const AnalysisResults = ({ data }: { data: AnalysisResult }) => {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">No competitors analyzed. Add competitors for intel.</p>
+              <p className="text-sm text-muted-foreground">No competitors analyzed.</p>
             )}
           </div>
         </motion.div>

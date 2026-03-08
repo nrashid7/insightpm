@@ -6,6 +6,58 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function scrapeProductFeedback(productName: string, website?: string, competitors?: string[]): Promise<string> {
+  const apiKey = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!apiKey) {
+    console.log("No FIRECRAWL_API_KEY, skipping web scraping");
+    return "";
+  }
+
+  const queries = [
+    `"${productName}" review complaints problems`,
+    `"${productName}" feature request wishlist`,
+  ];
+  if (competitors && competitors.length > 0) {
+    queries.push(`"${productName}" vs ${competitors[0]} comparison`);
+  }
+
+  const allContent: string[] = [];
+
+  for (const query of queries) {
+    try {
+      const response = await fetch("https://api.firecrawl.dev/v1/search", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query,
+          limit: 5,
+          scrapeOptions: { formats: ["markdown"] },
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const results = data.data || [];
+        for (const r of results) {
+          const md = r.markdown || r.description || "";
+          if (md) allContent.push(md.slice(0, 2000));
+        }
+      } else {
+        console.error(`Firecrawl search failed for "${query}":`, response.status);
+      }
+    } catch (e) {
+      console.error(`Firecrawl error for "${query}":`, e);
+    }
+  }
+
+  const combined = allContent.join("\n\n---\n\n");
+  // Limit to ~15k chars to stay within AI context
+  return combined.slice(0, 15000);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -30,23 +82,32 @@ serve(async (req) => {
       ? competitors.split(",").map((c: string) => c.trim()).filter(Boolean)
       : [];
 
-    const systemPrompt = `You are a product intelligence analyst. Given a product name and optionally its website and competitors, generate a realistic and detailed product analysis based on your knowledge. Use the analyze_product tool to return structured data.
+    // Scrape real feedback from the web
+    console.log("Scraping product feedback...");
+    const scrapedContent = await scrapeProductFeedback(productName, website, competitorList);
+    console.log(`Scraped ${scrapedContent.length} chars of feedback`);
+
+    const hasScrapedData = scrapedContent.length > 100;
+
+    const systemPrompt = `You are a product intelligence analyst. Given a product name${hasScrapedData ? " and real user feedback scraped from the web" : ""}, generate a detailed product analysis. Use the analyze_product tool to return structured data.
 
 Guidelines:
-- Generate realistic complaint data with mention counts (highest first)
-- Generate realistic feature request data with mention counts and trend direction
+- ${hasScrapedData ? "Base your analysis primarily on the real scraped feedback data provided" : "Generate realistic analysis based on your knowledge of the product"}
+- Generate complaint data with mention counts (highest first, 4-6 items)
+- Generate feature request data with mention counts and trend direction (5-8 items)
 - Sentiment should be percentages adding to 100
-- Trend data should show 6 months of data with a generally increasing pattern
+- Trend data should show 6 months of data
 - Competitor intel should highlight real weaknesses if competitors are provided
-- AI recommendation should be specific and actionable, referencing the data
-- totalFeedback should be the sum of all mentions roughly
+- AI recommendation should be specific and actionable
+- totalFeedback should reflect the rough volume analyzed
 - avgSentiment should be between 1-5
-- sourcesCount should be between 4-8`;
+- sourcesCount should be between 4-12`;
 
     const userPrompt = `Analyze this product:
 Product: ${productName}
 ${website ? `Website: ${website}` : ""}
 ${competitorList.length > 0 ? `Competitors: ${competitorList.join(", ")}` : ""}
+${hasScrapedData ? `\n--- REAL USER FEEDBACK FROM WEB ---\n${scrapedContent}\n--- END FEEDBACK ---` : ""}
 
 Provide a comprehensive product intelligence analysis.`;
 
@@ -80,10 +141,7 @@ Provide a comprehensive product intelligence analysis.`;
                     type: "array",
                     items: {
                       type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        mentions: { type: "number" },
-                      },
+                      properties: { name: { type: "string" }, mentions: { type: "number" } },
                       required: ["name", "mentions"],
                     },
                   },
@@ -102,10 +160,7 @@ Provide a comprehensive product intelligence analysis.`;
                     type: "array",
                     items: {
                       type: "object",
-                      properties: {
-                        month: { type: "string" },
-                        requests: { type: "number" },
-                      },
+                      properties: { month: { type: "string" }, requests: { type: "number" } },
                       required: ["month", "requests"],
                     },
                   },
@@ -137,18 +192,9 @@ Provide a comprehensive product intelligence analysis.`;
                   sourcesCount: { type: "number" },
                 },
                 required: [
-                  "productName",
-                  "totalFeedback",
-                  "avgSentiment",
-                  "topComplaintsCount",
-                  "topFeatureRequestCount",
-                  "complaints",
-                  "sentiment",
-                  "trendData",
-                  "featureRequests",
-                  "competitors",
-                  "aiRecommendation",
-                  "sourcesCount",
+                  "productName", "totalFeedback", "avgSentiment", "topComplaintsCount",
+                  "topFeatureRequestCount", "complaints", "sentiment", "trendData",
+                  "featureRequests", "competitors", "aiRecommendation", "sourcesCount",
                 ],
                 additionalProperties: false,
               },
@@ -187,7 +233,6 @@ Provide a comprehensive product intelligence analysis.`;
 
     const analysisData = JSON.parse(toolCall.function.arguments);
 
-    // Add colors to sentiment data
     const sentimentColors: Record<string, string> = {
       Positive: "hsl(150, 60%, 50%)",
       Neutral: "hsl(215, 20%, 55%)",
