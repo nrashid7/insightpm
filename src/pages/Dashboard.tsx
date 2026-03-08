@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Zap, Search, TrendingDown, TrendingUp, MessageSquare, Users, Star,
   AlertTriangle, Save, Download, History, Share2, FileText, LogOut,
-  ExternalLink, ChevronDown, ChevronUp, Target,
+  ExternalLink, ChevronDown, ChevronUp, Target, Layers, RefreshCw,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Tooltip } from "recharts";

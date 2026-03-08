@@ -8,6 +8,7 @@ export async function analyzeProduct(input: AnalysisInput): Promise<AnalysisResu
       website: input.website,
       competitors: input.competitors,
       sources: input.sources,
+      useCache: input.useCache,
     },
   });
 
