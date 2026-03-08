@@ -37,6 +37,7 @@ const Dashboard = () => {
   const initialWebsite = searchParams.get("website") || "";
   const initialCompetitors = searchParams.get("competitors") || "";
   const initialSources = searchParams.get("sources") || "";
+  const initialCustomFeedback = searchParams.get("customFeedback") || "";
   const analysisId = searchParams.get("analysisId") || "";
 
   const [productName, setProductName] = useState(initialProduct);
