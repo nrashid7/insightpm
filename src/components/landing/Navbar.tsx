@@ -20,7 +20,7 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="text-muted-foreground">Sign in</Button>
+          <Link to="/auth"><Button variant="ghost" size="sm" className="text-muted-foreground">Sign in</Button></Link>
           <Link to="/analyze">
             <Button variant="hero" size="sm">Try Free</Button>
           </Link>
