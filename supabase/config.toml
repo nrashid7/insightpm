@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.firecrawl-search]
 verify_jwt = false
+
+[functions.run-monitoring]
+verify_jwt = false
