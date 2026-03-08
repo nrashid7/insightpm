@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const plans = [
   {
@@ -72,12 +73,14 @@ const PricingSection = () => {
                   </li>
                 ))}
               </ul>
-              <Button
-                variant={plan.highlight ? "hero" : "hero-outline"}
-                className="w-full"
-              >
-                Get Started
-              </Button>
+              <Link to="/analyze">
+                <Button
+                  variant={plan.highlight ? "hero" : "hero-outline"}
+                  className="w-full"
+                >
+                  Get Started
+                </Button>
+              </Link>
             </motion.div>
           ))}
         </div>

@@ -48,9 +48,11 @@ const HeroSection = () => {
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
-            <Button variant="hero-outline" size="lg" className="text-base px-8 h-12">
-              Watch Demo
-            </Button>
+            <a href="#how-it-works">
+              <Button variant="hero-outline" size="lg" className="text-base px-8 h-12">
+                Watch Demo
+              </Button>
+            </a>
           </div>
 
           {/* Stats */}

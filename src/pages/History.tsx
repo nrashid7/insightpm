@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Zap, ArrowLeft, Trash2, Clock, ExternalLink } from "lucide-react";
+import { Trash2, Clock, ExternalLink } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import Navbar from "@/components/landing/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,26 +65,9 @@ const History = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border h-14 flex items-center px-6 glass sticky top-0 z-50">
-        <Link to="/" className="flex items-center gap-2 mr-6">
-          <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-            <Zap className="w-3.5 h-3.5 text-primary" />
-          </div>
-          <span className="font-bold text-foreground">InsightPM</span>
-        </Link>
-        <div className="ml-auto flex items-center gap-2">
-          <Link to="/analyze">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">New Analysis</Button>
-          </Link>
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back
-            </Button>
-          </Link>
-        </div>
-      </header>
+      <Navbar />
 
-      <main className="container mx-auto px-6 py-8 max-w-3xl">
+      <main className="container mx-auto px-6 py-8 pt-24 max-w-3xl">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl font-bold text-foreground mb-1">
             Analysis <span className="text-gradient-primary">History</span>
