@@ -61,6 +61,8 @@ serve(async (req) => {
     let feedbackSamples: { text: string; source: string; title?: string; url?: string; rating?: number }[] = [];
     let clusters: { name: string; count: number; avgSentiment: string; samples: string[] }[] = [];
     let usedCache = false;
+    let analysisId: string | null = null;
+    let userId: string | null = null;
 
     // Check for cached data if requested
     if (useCache) {
@@ -125,15 +127,12 @@ serve(async (req) => {
     // Step 1: Collect feedback (if not using cache)
     if (!usedCache) {
       // Generate a UUID for analysisId so collect-feedback persists items to DB
-      const analysisId = crypto.randomUUID();
+      analysisId = crypto.randomUUID();
       console.log(`Collecting feedback with analysisId=${analysisId}...`);
 
       // Create a placeholder analysis record so FK constraints pass
-      // We'll update it with real results later
       const authHeader = req.headers.get("authorization") || "";
-      let userId: string | null = null;
       try {
-        // Try to extract user from the JWT
         const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
           global: { headers: { Authorization: authHeader } },
         });
@@ -415,6 +414,12 @@ Provide a comprehensive product intelligence analysis with feedback clusters.`;
     // If we had pre-computed clusters from classify-feedback or cache, prefer those
     if (clusters.length > 0) {
       analysisData.clusters = clusters;
+    }
+
+    // Update placeholder with real results and return analysisId
+    if (userId && analysisId) {
+      await supabase.from("analyses").update({ results: analysisData }).eq("id", analysisId);
+      analysisData.analysisId = analysisId;
     }
 
     return new Response(JSON.stringify(analysisData), {

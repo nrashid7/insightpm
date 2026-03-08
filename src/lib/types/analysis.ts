@@ -59,11 +59,12 @@ export interface AnalysisResult {
   competitors: CompetitorIntel[];
   aiRecommendation: string;
   sourcesCount: number;
-  // New fields
+  // Extended fields
   opportunityScore?: OpportunityScore[];
   sourceBreakdown?: SourceBreakdown[];
   feedbackSamples?: FeedbackSample[];
   clusters?: ClusterData[];
+  analysisId?: string;
 }
 
 export interface ClusterData {

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Zap, Bell, Plus, Trash2, Play, Pause, RefreshCw, AlertTriangle,
   TrendingUp, TrendingDown, Layers, MessageSquare, LogOut, History, Check,
+  ExternalLink,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,10 @@ interface MonitoredProduct {
   created_at: string;
 }
 
+interface LatestAnalysisMap {
+  [productName: string]: string; // analysisId
+}
+
 interface MonitoringAlert {
   id: string;
   product_id: string;
@@ -55,6 +60,7 @@ interface MonitoringAlert {
 const Monitor = () => {
   const [products, setProducts] = useState<MonitoredProduct[]>([]);
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
+  const [latestAnalyses, setLatestAnalyses] = useState<LatestAnalysisMap>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingOpen, setIsAddingOpen] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: "", website: "", competitors: "", frequency: "daily" });
@@ -76,8 +82,28 @@ const Monitor = () => {
       supabase.from("monitored_products").select("*").order("created_at", { ascending: false }),
       supabase.from("monitoring_alerts").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
-    setProducts((prods as MonitoredProduct[]) || []);
+    const productList = (prods as MonitoredProduct[]) || [];
+    setProducts(productList);
     setAlerts((alrts as MonitoringAlert[]) || []);
+
+    // Load latest analysis for each product
+    if (productList.length > 0 && user) {
+      const names = [...new Set(productList.map((p) => p.product_name))];
+      const analysisMap: LatestAnalysisMap = {};
+      for (const name of names) {
+        const { data: latest } = await supabase
+          .from("analyses")
+          .select("id")
+          .eq("product_name", name)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latest) analysisMap[name] = latest.id;
+      }
+      setLatestAnalyses(analysisMap);
+    }
+
     setIsLoading(false);
   };
 
@@ -304,6 +330,13 @@ const Monitor = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
+                          {latestAnalyses[product.product_name] && (
+                            <Link to={`/dashboard?analysisId=${latestAnalyses[product.product_name]}`}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title="View latest analysis">
+                                <ExternalLink className="w-4 h-4" />
+                              </Button>
+                            </Link>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
