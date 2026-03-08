@@ -330,6 +330,13 @@ const Monitor = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
+                          {latestAnalyses[product.product_name] && (
+                            <Link to={`/dashboard?analysisId=${latestAnalyses[product.product_name]}`}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" title="View latest analysis">
+                                <ExternalLink className="w-4 h-4" />
+                              </Button>
+                            </Link>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
