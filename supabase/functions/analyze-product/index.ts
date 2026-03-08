@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { productName, website, competitors, sources, useCache } = await req.json();
+    const { productName, website, competitors, sources, useCache, customFeedback } = await req.json();
 
     if (!productName) {
       return new Response(
@@ -112,7 +112,7 @@ serve(async (req) => {
           Authorization: `Bearer ${supabaseAnonKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ productName, website, competitors, sources }),
+        body: JSON.stringify({ productName, website, competitors, sources, customFeedback }),
       });
 
       if (collectRes.ok) {
