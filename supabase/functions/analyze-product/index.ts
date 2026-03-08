@@ -417,6 +417,25 @@ Provide a comprehensive product intelligence analysis with feedback clusters.`;
       analysisData.clusters = clusters;
     }
 
+    // Persist final results to the placeholder analysis row
+    if (userId && !usedCache) {
+      const analysisIdFromPipeline = (corpus as any).__analysisId;
+      // We stored analysisId earlier; update the placeholder with real results
+      try {
+        const authHeader = req.headers.get("authorization") || "";
+        let pipelineAnalysisId: string | null = null;
+        // Extract from the collect step - we need to pass it through
+        // The analysisId was generated at line ~128, let's use it from scope
+        // It's already in scope from the !usedCache block above
+      } catch {}
+    }
+
+    // Update placeholder with real results and return analysisId
+    if (userId && analysisId && !usedCache) {
+      await supabase.from("analyses").update({ results: analysisData }).eq("id", analysisId);
+      analysisData.analysisId = analysisId;
+    }
+
     return new Response(JSON.stringify(analysisData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
