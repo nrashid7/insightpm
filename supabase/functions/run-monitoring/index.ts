@@ -69,6 +69,7 @@ serve(async (req) => {
         }
 
         const newResults = await analyzeRes.json();
+        const newAnalysisId = newResults.analysisId || null;
         const alerts: { alert_type: string; message: string; data: any }[] = [];
 
         // Compare with previous analysis
@@ -143,14 +144,16 @@ serve(async (req) => {
           await supabase.from("monitoring_alerts").insert(alertRows);
         }
 
-        // Save the new analysis
-        await supabase.from("analyses").insert({
-          user_id: product.user_id,
-          product_name: product.product_name,
-          website: product.website,
-          competitors: product.competitors,
-          results: newResults,
-        });
+        // Save analysis only if not already persisted by analyze-product pipeline
+        if (!newAnalysisId) {
+          await supabase.from("analyses").insert({
+            user_id: product.user_id,
+            product_name: product.product_name,
+            website: product.website,
+            competitors: product.competitors,
+            results: newResults,
+          });
+        }
 
         // Update next_run_at
         const nextRun = new Date();
