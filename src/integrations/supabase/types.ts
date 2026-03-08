@@ -88,10 +88,13 @@ export type Database = {
       feedback_items: {
         Row: {
           analysis_id: string | null
+          classified_at: string | null
+          cluster: string | null
           collected_at: string
           id: string
           metadata: Json | null
           product_name: string
+          quality_score: number | null
           rating: number | null
           sentiment: string | null
           source: string
@@ -102,10 +105,13 @@ export type Database = {
         }
         Insert: {
           analysis_id?: string | null
+          classified_at?: string | null
+          cluster?: string | null
           collected_at?: string
           id?: string
           metadata?: Json | null
           product_name: string
+          quality_score?: number | null
           rating?: number | null
           sentiment?: string | null
           source: string
@@ -116,10 +122,13 @@ export type Database = {
         }
         Update: {
           analysis_id?: string | null
+          classified_at?: string | null
+          cluster?: string | null
           collected_at?: string
           id?: string
           metadata?: Json | null
           product_name?: string
+          quality_score?: number | null
           rating?: number | null
           sentiment?: string | null
           source?: string
