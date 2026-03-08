@@ -83,13 +83,13 @@ const Dashboard = () => {
       return;
     }
     setIsSaving(true);
-    const { error: err } = await supabase.from("analyses").insert({
+    const { error: err } = await supabase.from("analyses").insert([{
       user_id: user.id,
       product_name: data.productName,
       website: initialWebsite || null,
       competitors: initialCompetitors || null,
       results: data as unknown as Record<string, unknown>,
-    });
+    }]);
     if (err) {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } else {
