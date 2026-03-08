@@ -402,7 +402,7 @@ const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, onRe
           </Button>
           {isSaved && isLoggedIn && (
             <>
-              <Button variant="outline" size="sm" onClick={onReanalyze} disabled={isReanalyzing}>
+              <Button variant="outline" size="sm" onClick={onReanalyze} disabled={isReanalyzing} title="Re-run analysis using recently cached feedback data for faster results">
                 <RefreshCw className={`w-4 h-4 mr-1 ${isReanalyzing ? "animate-spin" : ""}`} />
                 {isReanalyzing ? "Re-analyzing..." : "Re-analyze (cached)"}
               </Button>
@@ -437,7 +437,7 @@ const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, onRe
       {data.sourceBreakdown && data.sourceBreakdown.length > 0 && (
         <motion.div className="mb-8 rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
           <h3 className="text-sm font-semibold text-foreground mb-3">Sources Scanned</h3>
-          <ResponsiveContainer width="100%" height={Math.max(140, data.sourceBreakdown.length * 32)}>
+          <ResponsiveContainer width="100%" height={Math.max(160, data.sourceBreakdown.length * 36)}>
             <BarChart
               data={data.sourceBreakdown.map((s) => ({
                 ...s,

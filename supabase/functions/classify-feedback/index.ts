@@ -28,7 +28,6 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Fetch all feedback items for this analysis
     const { data: items, error: fetchErr } = await supabase
       .from("feedback_items")
       .select("id, text, title, source, rating")
@@ -49,21 +48,12 @@ serve(async (req) => {
     const spamPatterns = /^(test|asdf|hello|hi|ok|nice|good|bad|yes|no|lol|wow|great|cool|thanks|thx|ty)$/i;
     const filtered: string[] = [];
     const validItems: typeof items = [];
-
     const seenTexts = new Set<string>();
+
     for (const item of items) {
       const text = (item.text || "").trim();
       const normalized = text.toLowerCase().replace(/\s+/g, " ");
-
-      if (text.length < 30) {
-        filtered.push(item.id);
-        continue;
-      }
-      if (spamPatterns.test(normalized)) {
-        filtered.push(item.id);
-        continue;
-      }
-      if (seenTexts.has(normalized)) {
+      if (text.length < 30 || spamPatterns.test(normalized) || seenTexts.has(normalized)) {
         filtered.push(item.id);
         continue;
       }
@@ -71,7 +61,7 @@ serve(async (req) => {
       validItems.push(item);
     }
 
-    // Mark filtered items
+    // Mark filtered items in batch
     if (filtered.length > 0) {
       await supabase
         .from("feedback_items")
@@ -105,7 +95,7 @@ serve(async (req) => {
                 role: "system",
                 content: `You are a feedback classifier. For each feedback item, determine:
 1. sentiment: one of "positive", "negative", "neutral", "feature_request", "bug", "pricing", "performance"
-2. cluster: a short descriptive label (2-5 words) grouping similar feedback, e.g. "UX issues", "pricing complaints", "missing offline mode", "slow performance", "login problems"
+2. cluster: a short descriptive label (2-5 words) grouping similar feedback
 3. quality: 1=low relevance, 2=medium, 3=high relevance to product feedback
 
 Use the classify_feedback tool to return your classifications.`,
@@ -177,19 +167,32 @@ Use the classify_feedback tool to return your classifications.`,
       }
     }
 
-    // Step 3: Update classified items in DB
+    // Step 3: Batch update classified items grouped by sentiment+cluster
     const now = new Date().toISOString();
+    const updateGroups = new Map<string, string[]>();
+    const scoreMap = new Map<string, number>();
+
     for (const cls of allClassifications) {
-      await supabase
+      const key = `${cls.sentiment}|||${cls.cluster}|||${cls.quality_score}`;
+      if (!updateGroups.has(key)) updateGroups.set(key, []);
+      updateGroups.get(key)!.push(cls.id);
+      scoreMap.set(cls.id, cls.quality_score);
+    }
+
+    const updatePromises = Array.from(updateGroups.entries()).map(([key, ids]) => {
+      const [sentiment, cluster, qualityStr] = key.split("|||");
+      return supabase
         .from("feedback_items")
         .update({
-          sentiment: cls.sentiment,
-          cluster: cls.cluster,
-          quality_score: cls.quality_score,
+          sentiment,
+          cluster,
+          quality_score: parseInt(qualityStr, 10),
           classified_at: now,
         })
-        .eq("id", cls.id);
-    }
+        .in("id", ids);
+    });
+
+    await Promise.allSettled(updatePromises);
 
     // Build cluster summary
     const clusterMap = new Map<string, { count: number; sentiments: string[]; samples: string[] }>();
@@ -209,9 +212,7 @@ Use the classify_feedback tool to return your classifications.`,
     const clusters = Array.from(clusterMap.entries())
       .map(([name, data]) => {
         const sentimentCounts: Record<string, number> = {};
-        for (const s of data.sentiments) {
-          sentimentCounts[s] = (sentimentCounts[s] || 0) + 1;
-        }
+        for (const s of data.sentiments) sentimentCounts[s] = (sentimentCounts[s] || 0) + 1;
         const dominant = Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "neutral";
         return { name, count: data.count, avgSentiment: dominant, samples: data.samples };
       })

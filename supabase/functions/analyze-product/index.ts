@@ -7,6 +7,27 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Sanitize AI-generated strings: strip non-printable and common encoding artifacts
+function sanitizeString(s: string): string {
+  return s
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "")
+    .replace(/[肢肣肤肥肦肧肨肩肪肫肬肭肮肯肰肱育肳肴肵肶肷肸肹肺肻肼肽肾肿胀胁胂胃胄胅胆胇胈胉胊胋背胍胎胏胐胑胒胓胔胕胖胗胘胙胚胛胜胝胞胟胠胡胢胣胤胥胦胧胨胩胪胫胬胭胮胯胰胱胲胳胴胵胶胷胸胹胺胻胼能胾胿脀脁脂脃脄脅脆脇脈脉脊脋脌脍脎脏脐脑脒脓脔脕脖脗脘脙脚脛脜脝脞脟脠脡脢脣脤脥脦脧脨脩脪脫脬脭脮脯脰脱脲脳脴脵脶脷脸脹脺脻脼脽脾脿]/g, "")
+    .trim();
+}
+
+function sanitizeDeep(obj: any): any {
+  if (typeof obj === "string") return sanitizeString(obj);
+  if (Array.isArray(obj)) return obj.map(sanitizeDeep);
+  if (obj && typeof obj === "object") {
+    const result: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      result[k] = sanitizeDeep(v);
+    }
+    return result;
+  }
+  return obj;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -57,13 +78,11 @@ serve(async (req) => {
         usedCache = true;
         totalItems = cachedItems.length;
 
-        // Build corpus from cached items
         corpus = cachedItems
           .map((item) => `[${item.source}] ${item.title ? item.title + ": " : ""}${item.text}`)
           .join("\n\n---\n\n")
           .slice(0, 25000);
 
-        // Build source breakdown from cached
         const sourceCounts: Record<string, number> = {};
         for (const item of cachedItems) {
           sourceCounts[item.source] = (sourceCounts[item.source] || 0) + 1;
@@ -105,14 +124,49 @@ serve(async (req) => {
 
     // Step 1: Collect feedback (if not using cache)
     if (!usedCache) {
-      console.log("Collecting feedback from multiple sources...");
+      // Generate a UUID for analysisId so collect-feedback persists items to DB
+      const analysisId = crypto.randomUUID();
+      console.log(`Collecting feedback with analysisId=${analysisId}...`);
+
+      // Create a placeholder analysis record so FK constraints pass
+      // We'll update it with real results later
+      const authHeader = req.headers.get("authorization") || "";
+      let userId: string | null = null;
+      try {
+        // Try to extract user from the JWT
+        const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: { user } } = await anonClient.auth.getUser();
+        userId = user?.id || null;
+      } catch { /* no user, that's ok */ }
+
+      // Insert placeholder analysis (use service role so RLS doesn't block)
+      if (userId) {
+        await supabase.from("analyses").insert({
+          id: analysisId,
+          user_id: userId,
+          product_name: productName,
+          website: website || null,
+          competitors: competitors || null,
+          results: {},
+        });
+      }
+
       const collectRes = await fetch(`${supabaseUrl}/functions/v1/collect-feedback`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${supabaseAnonKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ productName, website, competitors, sources, customFeedback }),
+        body: JSON.stringify({
+          productName,
+          website,
+          competitors,
+          sources,
+          customFeedback,
+          analysisId: userId ? analysisId : undefined,
+        }),
       });
 
       if (collectRes.ok) {
@@ -122,27 +176,43 @@ serve(async (req) => {
         sourceBreakdown = collectData.sourceBreakdown || [];
         feedbackSamples = collectData.feedbackSamples || [];
         console.log(`Collected ${totalItems} items from ${sourceBreakdown.length} sources`);
+
+        // Step 1.5: Classify feedback if items were persisted
+        if (userId && totalItems > 0) {
+          try {
+            console.log(`Classifying feedback for analysisId=${analysisId}...`);
+            const classifyRes = await fetch(`${supabaseUrl}/functions/v1/classify-feedback`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${supabaseAnonKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ analysisId }),
+            });
+
+            if (classifyRes.ok) {
+              const classifyData = await classifyRes.json();
+              console.log(`Classified ${classifyData.classified} items, filtered ${classifyData.filtered}, ${classifyData.clusters?.length || 0} clusters`);
+              if (classifyData.clusters && classifyData.clusters.length > 0) {
+                clusters = classifyData.clusters;
+              }
+            } else {
+              console.error("classify-feedback failed:", classifyRes.status);
+            }
+          } catch (e) {
+            console.error("Classification step error:", e);
+          }
+        }
       } else {
         console.error("collect-feedback failed:", collectRes.status);
       }
 
-      // Step 1.5: Classify feedback if we have an analysis context
-      // We call classify-feedback to get clusters even without a saved analysisId
-      // For now, we pass the feedback through the classifier inline
-      if (totalItems > 0) {
-        try {
-          // Create a temporary analysis record to store feedback for classification
-          // Or classify inline - for performance, let's classify inline with the main AI call
-          console.log("Skipping separate classification - will include cluster analysis in main AI call");
-        } catch (e) {
-          console.error("Classification step error:", e);
-        }
-      }
+      // Clean up placeholder if no user (items won't have been persisted anyway)
+      // The placeholder will be updated after AI analysis if user is logged in
     }
 
     const hasScrapedData = corpus.length > 100;
 
-    // Build cluster context for prompt
     const clusterContext = clusters.length > 0
       ? `\nExisting cluster analysis:\n${clusters.slice(0, 15).map((c) => `- "${c.name}": ${c.count} items, dominant sentiment: ${c.avgSentiment}`).join("\n")}`
       : "";
@@ -319,7 +389,10 @@ Provide a comprehensive product intelligence analysis with feedback clusters.`;
       throw new Error("AI did not return structured data");
     }
 
-    const analysisData = JSON.parse(toolCall.function.arguments);
+    let analysisData = JSON.parse(toolCall.function.arguments);
+
+    // Sanitize encoding artifacts
+    analysisData = sanitizeDeep(analysisData);
 
     // Add sentiment colors
     const sentimentColors: Record<string, string> = {
@@ -339,8 +412,8 @@ Provide a comprehensive product intelligence analysis with feedback clusters.`;
     }));
     analysisData.feedbackSamples = feedbackSamples;
 
-    // If we had pre-computed clusters from cache, prefer those over AI-generated ones
-    if (usedCache && clusters.length > 0) {
+    // If we had pre-computed clusters from classify-feedback or cache, prefer those
+    if (clusters.length > 0) {
       analysisData.clusters = clusters;
     }
 
