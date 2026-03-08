@@ -4,8 +4,9 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import Navbar from "@/components/landing/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -69,16 +70,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <nav className="fixed top-0 left-0 right-0 z-50 glass">
-        <div className="container mx-auto flex items-center justify-between h-16 px-6">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-lg font-bold text-foreground">InsightPM</span>
-          </Link>
-        </div>
-      </nav>
+      <Navbar />
 
       <div className="flex-1 flex items-center justify-center pt-16 px-6">
         <motion.div
