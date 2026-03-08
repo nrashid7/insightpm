@@ -88,7 +88,7 @@ const Dashboard = () => {
       product_name: data.productName,
       website: initialWebsite || null,
       competitors: initialCompetitors || null,
-      results: data as unknown as Record<string, unknown>,
+      results: JSON.parse(JSON.stringify(data)),
     }]);
     if (err) {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
