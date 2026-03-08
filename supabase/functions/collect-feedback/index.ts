@@ -394,7 +394,7 @@ serve(async (req) => {
   }
 
   try {
-    const { productName, website, competitors, analysisId, sources } = await req.json();
+    const { productName, website, competitors, analysisId, sources, customFeedback } = await req.json();
 
     if (!productName) {
       return new Response(
@@ -446,6 +446,18 @@ serve(async (req) => {
       });
 
     await Promise.allSettled(promises);
+
+    // Handle custom/pasted feedback
+    if (customFeedback && typeof customFeedback === "string" && customFeedback.trim()) {
+      const lines = customFeedback.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+      const customItems: FeedbackItem[] = lines.map((line: string) => ({
+        product_name: productName,
+        source: "custom",
+        text: line.slice(0, 2000),
+        title: line.slice(0, 80),
+      }));
+      results.push({ source: "custom", items: customItems, duration_ms: 0 });
+    }
 
     // Deduplicate by URL
     const seenUrls = new Set<string>();

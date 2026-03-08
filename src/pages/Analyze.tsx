@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowRight, Globe, Users, Package, Database } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowRight, Globe, Users, Package, Database, FileText } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,13 +20,15 @@ const ALL_SOURCES = [
   { id: "web", label: "General Web", icon: "🌐" },
   { id: "youtube", label: "YouTube", icon: "▶️" },
   { id: "googleplay", label: "Google Play", icon: "🤖" },
+  { id: "custom", label: "Custom / Paste", icon: "📋" },
 ];
 
 const Analyze = () => {
   const [productName, setProductName] = useState("");
   const [website, setWebsite] = useState("");
   const [competitors, setCompetitors] = useState("");
-  const [selectedSources, setSelectedSources] = useState<string[]>(ALL_SOURCES.map((s) => s.id));
+  const [selectedSources, setSelectedSources] = useState<string[]>(ALL_SOURCES.filter((s) => s.id !== "custom").map((s) => s.id));
+  const [customFeedback, setCustomFeedback] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -62,8 +65,12 @@ const Analyze = () => {
     const params = new URLSearchParams({ product: productName.trim() });
     if (website.trim()) params.set("website", website.trim());
     if (competitors.trim()) params.set("competitors", competitors.trim());
-    if (selectedSources.length < ALL_SOURCES.length) {
-      params.set("sources", selectedSources.join(","));
+    const sourcesWithoutCustom = selectedSources.filter((s) => s !== "custom");
+    if (sourcesWithoutCustom.length < ALL_SOURCES.length - 1) {
+      params.set("sources", sourcesWithoutCustom.join(","));
+    }
+    if (selectedSources.includes("custom") && customFeedback.trim()) {
+      params.set("customFeedback", customFeedback.trim());
     }
 
     navigate(`/dashboard?${params.toString()}`);
@@ -174,6 +181,27 @@ const Analyze = () => {
                   Clear all
                 </button>
               </div>
+
+              {/* Custom feedback textarea */}
+              {selectedSources.includes("custom") && (
+                <div className="space-y-2 mt-2">
+                  <Label htmlFor="customFeedback" className="flex items-center gap-2 text-foreground">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    Paste feedback <span className="text-muted-foreground text-xs">(one per line, or CSV)</span>
+                  </Label>
+                  <Textarea
+                    id="customFeedback"
+                    value={customFeedback}
+                    onChange={(e) => setCustomFeedback(e.target.value)}
+                    placeholder={"Support ticket: Login keeps failing after 2FA update\nUser complaint: Can't export data to PDF anymore\nFeature request: Add dark mode support"}
+                    className="bg-secondary border-border min-h-[120px] text-sm"
+                    rows={5}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {customFeedback.trim() ? `${customFeedback.trim().split("\n").filter(Boolean).length} items` : "Paste support tickets, survey responses, or any text feedback"}
+                  </p>
+                </div>
+              )}
             </div>
 
             <Button

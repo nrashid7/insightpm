@@ -1,16 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, Menu, X, LogOut, History, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
 
 const Navbar = () => {
   const { user, loading, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "U";
+
+  useEffect(() => {
+    if (!user) { setUnreadAlerts(0); return; }
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("monitoring_alerts")
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false);
+      setUnreadAlerts(count || 0);
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
@@ -39,8 +55,13 @@ const Navbar = () => {
                 </Button>
               </Link>
               <Link to="/monitor">
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                <Button variant="ghost" size="sm" className="text-muted-foreground relative">
                   <Bell className="w-4 h-4 mr-1" /> Monitor
+                  {unreadAlerts > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                      {unreadAlerts > 9 ? "9+" : unreadAlerts}
+                    </span>
+                  )}
                 </Button>
               </Link>
               <Link to="/analyze">
@@ -86,8 +107,13 @@ const Navbar = () => {
                         </Button>
                       </Link>
                       <Link to="/monitor" onClick={() => setOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
+                        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground relative">
                           <Bell className="w-4 h-4 mr-2" /> Monitor
+                          {unreadAlerts > 0 && (
+                            <span className="ml-auto w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+                              {unreadAlerts > 9 ? "9+" : unreadAlerts}
+                            </span>
+                          )}
                         </Button>
                       </Link>
                       <Link to="/analyze" onClick={() => setOpen(false)}>

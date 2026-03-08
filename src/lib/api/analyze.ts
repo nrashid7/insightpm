@@ -9,6 +9,7 @@ export async function analyzeProduct(input: AnalysisInput): Promise<AnalysisResu
       competitors: input.competitors,
       sources: input.sources,
       useCache: input.useCache,
+      customFeedback: input.customFeedback,
     },
   });
 
