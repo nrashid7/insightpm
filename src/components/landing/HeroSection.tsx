@@ -42,7 +42,7 @@ const HeroSection = () => {
           </p>
 
           <div className="flex items-center justify-center gap-4">
-            <Link to="/dashboard">
+            <Link to="/analyze">
               <Button variant="hero" size="lg" className="text-base px-8 h-12">
                 Start Analyzing
                 <ArrowRight className="w-4 h-4 ml-1" />
