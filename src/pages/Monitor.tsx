@@ -43,6 +43,10 @@ interface MonitoredProduct {
   created_at: string;
 }
 
+interface LatestAnalysisMap {
+  [productName: string]: string; // analysisId
+}
+
 interface MonitoringAlert {
   id: string;
   product_id: string;
@@ -77,8 +81,28 @@ const Monitor = () => {
       supabase.from("monitored_products").select("*").order("created_at", { ascending: false }),
       supabase.from("monitoring_alerts").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
-    setProducts((prods as MonitoredProduct[]) || []);
+    const productList = (prods as MonitoredProduct[]) || [];
+    setProducts(productList);
     setAlerts((alrts as MonitoringAlert[]) || []);
+
+    // Load latest analysis for each product
+    if (productList.length > 0 && user) {
+      const names = [...new Set(productList.map((p) => p.product_name))];
+      const analysisMap: LatestAnalysisMap = {};
+      for (const name of names) {
+        const { data: latest } = await supabase
+          .from("analyses")
+          .select("id")
+          .eq("product_name", name)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latest) analysisMap[name] = latest.id;
+      }
+      setLatestAnalyses(analysisMap);
+    }
+
     setIsLoading(false);
   };
 
