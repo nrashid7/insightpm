@@ -38,13 +38,18 @@ const History = () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from("analyses")
-      .select("id, product_name, website, competitors, created_at")
+      .select("id, product_name, website, competitors, created_at, results")
       .order("created_at", { ascending: false });
 
     if (error) {
       toast({ title: "Failed to load history", description: error.message, variant: "destructive" });
     } else {
-      setAnalyses(data || []);
+      // Filter out empty placeholder analyses (failed mid-pipeline)
+      const valid = (data || []).filter((a) => {
+        const r = a.results as Record<string, unknown> | null;
+        return r && Object.keys(r).length > 1;
+      });
+      setAnalyses(valid);
     }
     setIsLoading(false);
   };

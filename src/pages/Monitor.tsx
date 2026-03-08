@@ -86,20 +86,21 @@ const Monitor = () => {
     setProducts(productList);
     setAlerts((alrts as MonitoringAlert[]) || []);
 
-    // Load latest analysis for each product
+    // Load latest analysis for each product in a single query
     if (productList.length > 0 && user) {
       const names = [...new Set(productList.map((p) => p.product_name))];
+      const { data: allAnalyses } = await supabase
+        .from("analyses")
+        .select("id, product_name, created_at")
+        .eq("user_id", user.id)
+        .in("product_name", names)
+        .order("created_at", { ascending: false });
+
       const analysisMap: LatestAnalysisMap = {};
-      for (const name of names) {
-        const { data: latest } = await supabase
-          .from("analyses")
-          .select("id")
-          .eq("product_name", name)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (latest) analysisMap[name] = latest.id;
+      for (const a of allAnalyses || []) {
+        if (!analysisMap[a.product_name]) {
+          analysisMap[a.product_name] = a.id;
+        }
       }
       setLatestAnalyses(analysisMap);
     }
