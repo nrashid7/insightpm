@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Zap, Menu, X, LogOut, History } from "lucide-react";
+import { Zap, Menu, X, LogOut, History, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -36,6 +36,11 @@ const Navbar = () => {
               <Link to="/history">
                 <Button variant="ghost" size="sm" className="text-muted-foreground">
                   <History className="w-4 h-4 mr-1" /> History
+                </Button>
+              </Link>
+              <Link to="/monitor">
+                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  <Bell className="w-4 h-4 mr-1" /> Monitor
                 </Button>
               </Link>
               <Link to="/analyze">
@@ -78,6 +83,11 @@ const Navbar = () => {
                       <Link to="/history" onClick={() => setOpen(false)}>
                         <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
                           <History className="w-4 h-4 mr-2" /> History
+                        </Button>
+                      </Link>
+                      <Link to="/monitor" onClick={() => setOpen(false)}>
+                        <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
+                          <Bell className="w-4 h-4 mr-2" /> Monitor
                         </Button>
                       </Link>
                       <Link to="/analyze" onClick={() => setOpen(false)}>
