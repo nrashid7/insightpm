@@ -61,6 +61,8 @@ serve(async (req) => {
     let feedbackSamples: { text: string; source: string; title?: string; url?: string; rating?: number }[] = [];
     let clusters: { name: string; count: number; avgSentiment: string; samples: string[] }[] = [];
     let usedCache = false;
+    let analysisId: string | null = null;
+    let userId: string | null = null;
 
     // Check for cached data if requested
     if (useCache) {
@@ -125,15 +127,12 @@ serve(async (req) => {
     // Step 1: Collect feedback (if not using cache)
     if (!usedCache) {
       // Generate a UUID for analysisId so collect-feedback persists items to DB
-      const analysisId = crypto.randomUUID();
+      analysisId = crypto.randomUUID();
       console.log(`Collecting feedback with analysisId=${analysisId}...`);
 
       // Create a placeholder analysis record so FK constraints pass
-      // We'll update it with real results later
       const authHeader = req.headers.get("authorization") || "";
-      let userId: string | null = null;
       try {
-        // Try to extract user from the JWT
         const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
           global: { headers: { Authorization: authHeader } },
         });
@@ -417,21 +416,8 @@ Provide a comprehensive product intelligence analysis with feedback clusters.`;
       analysisData.clusters = clusters;
     }
 
-    // Persist final results to the placeholder analysis row
-    if (userId && !usedCache) {
-      const analysisIdFromPipeline = (corpus as any).__analysisId;
-      // We stored analysisId earlier; update the placeholder with real results
-      try {
-        const authHeader = req.headers.get("authorization") || "";
-        let pipelineAnalysisId: string | null = null;
-        // Extract from the collect step - we need to pass it through
-        // The analysisId was generated at line ~128, let's use it from scope
-        // It's already in scope from the !usedCache block above
-      } catch {}
-    }
-
     // Update placeholder with real results and return analysisId
-    if (userId && analysisId && !usedCache) {
+    if (userId && analysisId) {
       await supabase.from("analyses").update({ results: analysisData }).eq("id", analysisId);
       analysisData.analysisId = analysisId;
     }
