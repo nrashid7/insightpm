@@ -17,6 +17,8 @@ const ALL_SOURCES = [
   { id: "reddit", label: "Reddit", icon: "🔴" },
   { id: "trustpilot", label: "Trustpilot", icon: "⭐" },
   { id: "web", label: "General Web", icon: "🌐" },
+  { id: "youtube", label: "YouTube", icon: "▶️" },
+  { id: "googleplay", label: "Google Play", icon: "🤖" },
 ];
 
 const Analyze = () => {

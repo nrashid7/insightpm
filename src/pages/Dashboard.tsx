@@ -26,6 +26,8 @@ const SOURCE_LABELS: Record<string, { label: string; icon: string }> = {
   reddit: { label: "Reddit", icon: "🔴" },
   trustpilot: { label: "Trustpilot", icon: "⭐" },
   web: { label: "Web", icon: "🌐" },
+  youtube: { label: "YouTube", icon: "▶️" },
+  googleplay: { label: "Google Play", icon: "🤖" },
 };
 
 const Dashboard = () => {
