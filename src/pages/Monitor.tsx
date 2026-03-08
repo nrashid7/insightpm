@@ -60,6 +60,7 @@ interface MonitoringAlert {
 const Monitor = () => {
   const [products, setProducts] = useState<MonitoredProduct[]>([]);
   const [alerts, setAlerts] = useState<MonitoringAlert[]>([]);
+  const [latestAnalyses, setLatestAnalyses] = useState<LatestAnalysisMap>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingOpen, setIsAddingOpen] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: "", website: "", competitors: "", frequency: "daily" });
