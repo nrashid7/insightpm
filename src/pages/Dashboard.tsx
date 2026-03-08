@@ -54,7 +54,7 @@ const Dashboard = () => {
       setData(row.results as unknown as AnalysisResult);
       setProductName(row.product_name);
       setCurrentAnalysisId(row.id);
-      setIsPublic(row.is_public ?? false);
+      setIsPublic((row as any).is_public ?? false);
       setIsSaved(true);
     }
     setIsLoading(false);
@@ -110,7 +110,7 @@ const Dashboard = () => {
     const newPublic = !isPublic;
     const { error: err } = await supabase
       .from("analyses")
-      .update({ is_public: newPublic })
+      .update({ is_public: newPublic } as any)
       .eq("id", currentAnalysisId);
     if (err) {
       toast({ title: "Failed to update sharing", description: err.message, variant: "destructive" });
