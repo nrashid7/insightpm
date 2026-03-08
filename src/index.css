@@ -112,3 +112,19 @@
     @apply bg-card/60 backdrop-blur-xl border border-border;
   }
 }
+
+/* Print styles for PDF export */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  header, nav, .no-print {
+    display: none !important;
+  }
+
+  .rounded-xl {
+    break-inside: avoid;
+  }
+}

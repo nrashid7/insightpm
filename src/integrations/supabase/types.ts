@@ -19,6 +19,7 @@ export type Database = {
           competitors: string | null
           created_at: string
           id: string
+          is_public: boolean
           product_name: string
           results: Json
           user_id: string
@@ -28,6 +29,7 @@ export type Database = {
           competitors?: string | null
           created_at?: string
           id?: string
+          is_public?: boolean
           product_name: string
           results: Json
           user_id: string
@@ -37,6 +39,7 @@ export type Database = {
           competitors?: string | null
           created_at?: string
           id?: string
+          is_public?: boolean
           product_name?: string
           results?: Json
           user_id?: string

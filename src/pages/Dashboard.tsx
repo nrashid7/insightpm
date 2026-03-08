@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap, Search, ArrowLeft, TrendingDown, TrendingUp, MessageSquare, Users, Star, AlertTriangle, Save, Download, History } from "lucide-react";
+import { Zap, Search, ArrowLeft, TrendingDown, TrendingUp, MessageSquare, Users, Star, AlertTriangle, Save, Download, History, Share2, FileText, LogOut } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Tooltip } from "recharts";
 import { analyzeProduct } from "@/lib/api/analyze";
@@ -24,9 +24,11 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [currentAnalysisId, setCurrentAnalysisId] = useState(analysisId);
+  const [isPublic, setIsPublic] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     if (analysisId) {
@@ -51,6 +53,8 @@ const Dashboard = () => {
     } else {
       setData(row.results as unknown as AnalysisResult);
       setProductName(row.product_name);
+      setCurrentAnalysisId(row.id);
+      setIsPublic((row as any).is_public ?? false);
       setIsSaved(true);
     }
     setIsLoading(false);
@@ -60,6 +64,7 @@ const Dashboard = () => {
     setIsLoading(true);
     setError(null);
     setIsSaved(false);
+    setCurrentAnalysisId("");
     try {
       const result = await analyzeProduct({
         productName: name,
@@ -83,20 +88,42 @@ const Dashboard = () => {
       return;
     }
     setIsSaving(true);
-    const { error: err } = await supabase.from("analyses").insert([{
+    const { data: inserted, error: err } = await supabase.from("analyses").insert([{
       user_id: user.id,
       product_name: data.productName,
       website: initialWebsite || null,
       competitors: initialCompetitors || null,
       results: JSON.parse(JSON.stringify(data)),
-    }]);
+    }]).select("id").single();
     if (err) {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } else {
       setIsSaved(true);
+      setCurrentAnalysisId(inserted.id);
       toast({ title: "Analysis saved!" });
     }
     setIsSaving(false);
+  };
+
+  const handleShare = async () => {
+    if (!currentAnalysisId) return;
+    const newPublic = !isPublic;
+    const { error: err } = await supabase
+      .from("analyses")
+      .update({ is_public: newPublic } as any)
+      .eq("id", currentAnalysisId);
+    if (err) {
+      toast({ title: "Failed to update sharing", description: err.message, variant: "destructive" });
+      return;
+    }
+    setIsPublic(newPublic);
+    if (newPublic) {
+      const url = `${window.location.origin}/dashboard?analysisId=${currentAnalysisId}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied!", description: "Anyone with the link can view this analysis." });
+    } else {
+      toast({ title: "Sharing disabled", description: "This analysis is now private." });
+    }
   };
 
   const handleExportCSV = () => {
@@ -119,6 +146,10 @@ const Dashboard = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (productName.trim()) {
@@ -128,12 +159,12 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border h-14 flex items-center px-6 glass sticky top-0 z-50">
-        <Link to="/" className="flex items-center gap-2 mr-6">
+      <header className="border-b border-border h-14 flex items-center px-4 sm:px-6 glass sticky top-0 z-50">
+        <Link to="/" className="flex items-center gap-2 mr-4 shrink-0">
           <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
             <Zap className="w-3.5 h-3.5 text-primary" />
           </div>
-          <span className="font-bold text-foreground">InsightPM</span>
+          <span className="font-bold text-foreground hidden sm:inline">InsightPM</span>
         </Link>
 
         <form onSubmit={handleSearch} className="flex-1 max-w-md">
@@ -148,23 +179,25 @@ const Dashboard = () => {
           </div>
         </form>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
           {user && (
             <Link to="/history">
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex">
                 <History className="w-4 h-4 mr-1" /> History
+              </Button>
+              <Button variant="ghost" size="icon" className="text-muted-foreground sm:hidden">
+                <History className="w-4 h-4" />
               </Button>
             </Link>
           )}
           <Link to="/analyze">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">New Analysis</Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hidden sm:inline-flex">New Analysis</Button>
           </Link>
           {user ? (
-            <Link to="/history">
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
-                <ArrowLeft className="w-4 h-4 mr-1" /> Back
-              </Button>
-            </Link>
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
+              <LogOut className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
           ) : (
             <Link to="/auth">
               <Button variant="ghost" size="sm" className="text-primary">Sign In</Button>
@@ -173,7 +206,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {isLoading && <LoadingSkeleton productName={productName} />}
 
         {error && !isLoading && (
@@ -203,9 +236,13 @@ const Dashboard = () => {
             data={data}
             onSave={handleSave}
             onExportCSV={handleExportCSV}
+            onExportPDF={handleExportPDF}
+            onShare={handleShare}
             isSaving={isSaving}
             isSaved={isSaved}
             isLoggedIn={!!user}
+            isPublic={isPublic}
+            hasAnalysisId={!!currentAnalysisId}
           />
         )}
       </main>
@@ -235,12 +272,16 @@ interface AnalysisResultsProps {
   data: AnalysisResult;
   onSave: () => void;
   onExportCSV: () => void;
+  onExportPDF: () => void;
+  onShare: () => void;
   isSaving: boolean;
   isSaved: boolean;
   isLoggedIn: boolean;
+  isPublic: boolean;
+  hasAnalysisId: boolean;
 }
 
-const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLoggedIn }: AnalysisResultsProps) => {
+const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, isSaving, isSaved, isLoggedIn, isPublic, hasAnalysisId }: AnalysisResultsProps) => {
   const maxFeatureMentions = Math.max(...data.featureRequests.map((f) => f.mentions), 1);
 
   return (
@@ -248,14 +289,14 @@ const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLogge
       {/* Header + actions */}
       <motion.div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1">
             Analysis: <span className="text-gradient-primary">{data.productName}</span>
           </h1>
           <p className="text-sm text-muted-foreground">
             {data.totalFeedback.toLocaleString()} feedback items analyzed from {data.sourcesCount} sources
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {isLoggedIn && !isSaved && (
             <Button variant="outline" size="sm" onClick={onSave} disabled={isSaving}>
               <Save className="w-4 h-4 mr-1" /> {isSaving ? "Saving..." : "Save"}
@@ -264,33 +305,41 @@ const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLogge
           {isSaved && (
             <span className="text-xs text-primary font-medium">✓ Saved</span>
           )}
+          {isLoggedIn && hasAnalysisId && (
+            <Button variant="outline" size="sm" onClick={onShare}>
+              <Share2 className="w-4 h-4 mr-1" /> {isPublic ? "Unshare" : "Share"}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={onExportCSV}>
             <Download className="w-4 h-4 mr-1" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={onExportPDF}>
+            <FileText className="w-4 h-4 mr-1" /> PDF
           </Button>
         </div>
       </motion.div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {[
           { icon: MessageSquare, label: "Total Feedback", value: data.totalFeedback.toLocaleString(), color: "text-primary" },
           { icon: Star, label: "Avg Sentiment", value: `${data.avgSentiment}/5`, color: "text-accent" },
           { icon: TrendingDown, label: "Top Complaints", value: data.topComplaintsCount.toLocaleString(), color: "text-destructive" },
           { icon: TrendingUp, label: "Feature Requests", value: data.topFeatureRequestCount.toLocaleString(), color: "text-chart-4" },
         ].map((stat) => (
-          <motion.div key={stat.label} className="rounded-xl border border-border bg-card/50 p-5" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div key={stat.label} className="rounded-xl border border-border bg-card/50 p-4 sm:p-5" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center gap-2 mb-2">
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
               <span className="text-xs text-muted-foreground">{stat.label}</span>
             </div>
-            <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+            <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
           </motion.div>
         ))}
       </div>
 
       {/* Charts grid */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        <motion.div className="rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
+        <motion.div className="rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-accent" /> Top Complaints
           </h3>
@@ -304,10 +353,10 @@ const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLogge
           </ResponsiveContainer>
         </motion.div>
 
-        <motion.div className="rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+        <motion.div className="rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
           <h3 className="text-sm font-semibold text-foreground mb-1">Sentiment Breakdown</h3>
           <p className="text-xs text-muted-foreground mb-4">Overall sentiment distribution</p>
-          <div className="flex items-center gap-8">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
             <ResponsiveContainer width={160} height={160}>
               <PieChart>
                 <Pie data={data.sentiment} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={70} strokeWidth={0}>
@@ -327,7 +376,7 @@ const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLogge
           </div>
         </motion.div>
 
-        <motion.div className="rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+        <motion.div className="rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
           <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-chart-4" /> Feature Request Trend
           </h3>
@@ -342,7 +391,7 @@ const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLogge
           </ResponsiveContainer>
         </motion.div>
 
-        <motion.div className="rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+        <motion.div className="rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
           <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
             <Users className="w-4 h-4 text-chart-5" /> Competitor Intel
           </h3>
@@ -366,7 +415,7 @@ const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLogge
       </div>
 
       {/* AI Recommendation */}
-      <motion.div className="rounded-xl border border-primary/20 bg-primary/5 p-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+      <motion.div className="rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
             <Zap className="w-4 h-4 text-primary" />
@@ -379,7 +428,7 @@ const AnalysisResults = ({ data, onSave, onExportCSV, isSaving, isSaved, isLogge
       </motion.div>
 
       {/* Top Feature Requests */}
-      <motion.div className="mt-6 rounded-xl border border-border bg-card/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
+      <motion.div className="mt-6 rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
         <h3 className="text-sm font-semibold text-foreground mb-4">Top Feature Requests</h3>
         <div className="space-y-3">
           {data.featureRequests.map((f, i) => (
