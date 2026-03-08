@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Zap, Search, TrendingDown, TrendingUp, MessageSquare, Users, Star,
   AlertTriangle, Save, Download, History, Share2, FileText, LogOut,
-  ExternalLink, ChevronDown, ChevronUp, Target, Layers, RefreshCw,
+  ExternalLink, ChevronDown, ChevronUp, Target, Layers, RefreshCw, Bell,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Tooltip } from "recharts";
@@ -28,6 +28,7 @@ const SOURCE_LABELS: Record<string, { label: string; icon: string }> = {
   web: { label: "Web", icon: "🌐" },
   youtube: { label: "YouTube", icon: "▶️" },
   googleplay: { label: "Google Play", icon: "🤖" },
+  custom: { label: "Custom", icon: "📋" },
 };
 
 const Dashboard = () => {
@@ -45,6 +46,8 @@ const Dashboard = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [currentAnalysisId, setCurrentAnalysisId] = useState(analysisId);
   const [isPublic, setIsPublic] = useState(false);
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [isAddingMonitor, setIsAddingMonitor] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
@@ -172,6 +175,47 @@ const Dashboard = () => {
     window.print();
   };
 
+  const handleReanalyze = async () => {
+    if (!data) return;
+    setIsReanalyzing(true);
+    try {
+      const result = await analyzeProduct({
+        productName: data.productName,
+        website: initialWebsite || undefined,
+        competitors: initialCompetitors || undefined,
+        useCache: true,
+      });
+      setData(result);
+      toast({ title: "Re-analysis complete", description: "Used cached data for faster results." });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Re-analysis failed";
+      toast({ title: "Re-analysis failed", description: msg, variant: "destructive" });
+    } finally {
+      setIsReanalyzing(false);
+    }
+  };
+
+  const handleAddToMonitoring = async () => {
+    if (!user || !data) return;
+    setIsAddingMonitor(true);
+    const nextRun = new Date();
+    nextRun.setDate(nextRun.getDate() + 1);
+    const { error: err } = await supabase.from("monitored_products").insert({
+      user_id: user.id,
+      product_name: data.productName,
+      website: initialWebsite || null,
+      competitors: initialCompetitors || null,
+      frequency: "daily",
+      next_run_at: nextRun.toISOString(),
+    });
+    if (err) {
+      toast({ title: "Failed to add", description: err.message, variant: "destructive" });
+    } else {
+      toast({ title: "Added to monitoring!", description: "You'll get alerts when feedback changes." });
+    }
+    setIsAddingMonitor(false);
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (productName.trim()) {
@@ -260,11 +304,15 @@ const Dashboard = () => {
             onExportCSV={handleExportCSV}
             onExportPDF={handleExportPDF}
             onShare={handleShare}
+            onReanalyze={handleReanalyze}
+            onAddToMonitoring={handleAddToMonitoring}
             isSaving={isSaving}
             isSaved={isSaved}
             isLoggedIn={!!user}
             isPublic={isPublic}
             hasAnalysisId={!!currentAnalysisId}
+            isReanalyzing={isReanalyzing}
+            isAddingMonitor={isAddingMonitor}
           />
         )}
       </main>
@@ -303,14 +351,18 @@ interface AnalysisResultsProps {
   onExportCSV: () => void;
   onExportPDF: () => void;
   onShare: () => void;
+  onReanalyze: () => void;
+  onAddToMonitoring: () => void;
   isSaving: boolean;
   isSaved: boolean;
   isLoggedIn: boolean;
   isPublic: boolean;
   hasAnalysisId: boolean;
+  isReanalyzing: boolean;
+  isAddingMonitor: boolean;
 }
 
-const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, isSaving, isSaved, isLoggedIn, isPublic, hasAnalysisId }: AnalysisResultsProps) => {
+const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, onReanalyze, onAddToMonitoring, isSaving, isSaved, isLoggedIn, isPublic, hasAnalysisId, isReanalyzing, isAddingMonitor }: AnalysisResultsProps) => {
   const maxFeatureMentions = Math.max(...data.featureRequests.map((f) => f.mentions), 1);
   const [samplesOpen, setSamplesOpen] = useState(false);
 
@@ -346,6 +398,18 @@ const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, isSa
           <Button variant="outline" size="sm" onClick={onExportPDF}>
             <FileText className="w-4 h-4 mr-1" /> PDF
           </Button>
+          {isSaved && isLoggedIn && (
+            <>
+              <Button variant="outline" size="sm" onClick={onReanalyze} disabled={isReanalyzing}>
+                <RefreshCw className={`w-4 h-4 mr-1 ${isReanalyzing ? "animate-spin" : ""}`} />
+                {isReanalyzing ? "Re-analyzing..." : "Re-analyze (cached)"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={onAddToMonitoring} disabled={isAddingMonitor}>
+                <Bell className="w-4 h-4 mr-1" />
+                {isAddingMonitor ? "Adding..." : "Add to Monitor"}
+              </Button>
+            </>
+          )}
         </div>
       </motion.div>
 
@@ -367,24 +431,25 @@ const AnalysisResults = ({ data, onSave, onExportCSV, onExportPDF, onShare, isSa
         ))}
       </div>
 
-      {/* Source Breakdown */}
+      {/* Source Breakdown Bar Chart */}
       {data.sourceBreakdown && data.sourceBreakdown.length > 0 && (
         <motion.div className="mb-8 rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
           <h3 className="text-sm font-semibold text-foreground mb-3">Sources Scanned</h3>
-          <div className="flex flex-wrap gap-2">
-            {data.sourceBreakdown.map((s) => {
-              const info = SOURCE_LABELS[s.source] || { label: s.source, icon: "📄" };
-              return (
-                <div key={s.source} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border">
-                  <span className="text-sm">{info.icon}</span>
-                  <span className="text-xs text-foreground font-medium">{info.label}</span>
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-1">
-                    {s.count}
-                  </Badge>
-                </div>
-              );
-            })}
-          </div>
+          <ResponsiveContainer width="100%" height={Math.max(140, data.sourceBreakdown.length * 32)}>
+            <BarChart
+              data={data.sourceBreakdown.map((s) => ({
+                ...s,
+                label: (SOURCE_LABELS[s.source] || { label: s.source }).label,
+              }))}
+              layout="vertical"
+              margin={{ left: 10 }}
+            >
+              <XAxis type="number" hide />
+              <YAxis type="category" dataKey="label" width={100} tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: "hsl(222, 44%, 8%)", border: "1px solid hsl(222, 20%, 16%)", borderRadius: 8, fontSize: 12 }} labelStyle={{ color: "hsl(210, 40%, 96%)" }} />
+              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={18} />
+            </BarChart>
+          </ResponsiveContainer>
         </motion.div>
       )}
 
