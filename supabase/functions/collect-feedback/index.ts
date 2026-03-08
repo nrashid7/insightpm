@@ -296,6 +296,96 @@ async function collectGeneralWeb(productName: string, firecrawlKey: string, comp
   return items;
 }
 
+async function collectYouTube(productName: string, apiKey: string): Promise<FeedbackItem[]> {
+  const items: FeedbackItem[] = [];
+  if (!apiKey) return items;
+
+  try {
+    // Search for product review videos
+    const searchRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(productName + " review")}&type=video&maxResults=5&key=${apiKey}`
+    );
+    if (!searchRes.ok) return items;
+    const searchData = await searchRes.json();
+
+    const videoIds = (searchData.items || []).map((v: any) => v.id.videoId).filter(Boolean);
+    if (videoIds.length === 0) return items;
+
+    // Fetch comments for each video
+    for (const videoId of videoIds.slice(0, 3)) {
+      try {
+        const commentsRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=20&textFormat=plainText&key=${apiKey}`
+        );
+        if (!commentsRes.ok) continue;
+        const commentsData = await commentsRes.json();
+
+        for (const thread of commentsData.items || []) {
+          const comment = thread.snippet?.topLevelComment?.snippet;
+          if (!comment?.textDisplay || comment.textDisplay.length < 20) continue;
+          items.push({
+            product_name: productName,
+            source: "youtube",
+            title: `Comment on: ${thread.snippet?.videoId}`,
+            text: comment.textDisplay.slice(0, 2000),
+            url: `https://www.youtube.com/watch?v=${videoId}&lc=${thread.snippet?.topLevelComment?.id}`,
+            metadata: { 
+              likeCount: comment.likeCount,
+              authorDisplayName: comment.authorDisplayName,
+              videoId,
+            },
+            source_timestamp: comment.publishedAt,
+          });
+        }
+      } catch { /* skip */ }
+    }
+  } catch (e) {
+    console.error("YouTube error:", e);
+  }
+  return items;
+}
+
+async function collectGooglePlay(productName: string, firecrawlKey: string): Promise<FeedbackItem[]> {
+  const items: FeedbackItem[] = [];
+  if (!firecrawlKey) return items;
+
+  try {
+    const res = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: `site:play.google.com "${productName}" reviews`,
+        limit: 5,
+        scrapeOptions: { formats: ["markdown"] },
+      }),
+    });
+    if (!res.ok) return items;
+    const data = await res.json();
+
+    for (const r of data.data || []) {
+      const text = r.markdown || r.description || "";
+      if (!text || text.length < 30) continue;
+      
+      // Try to extract rating from the content
+      const ratingMatch = text.match(/(\d)\s*stars?/i);
+      const rating = ratingMatch ? parseInt(ratingMatch[1], 10) : undefined;
+
+      items.push({
+        product_name: productName,
+        source: "googleplay",
+        title: r.title || "",
+        text: text.slice(0, 2000),
+        rating,
+        url: r.url || "",
+        metadata: { firecrawl_title: r.title },
+      });
+    }
+  } catch (e) {
+    console.error("Google Play error:", e);
+  }
+  return items;
+}
+
 // ─── Orchestrator ────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -314,12 +404,13 @@ serve(async (req) => {
     }
 
     const firecrawlKey = Deno.env.get("FIRECRAWL_API_KEY") || "";
+    const youtubeKey = Deno.env.get("YOUTUBE_API_KEY") || "";
     const competitorList = competitors
       ? competitors.split(",").map((c: string) => c.trim()).filter(Boolean)
       : [];
 
     // Determine which sources to run
-    const allSources = ["hackernews", "github", "stackoverflow", "appstore", "reddit", "trustpilot", "web"];
+    const allSources = ["hackernews", "github", "stackoverflow", "appstore", "reddit", "trustpilot", "web", "youtube", "googleplay"];
     const enabledSources: string[] = sources && Array.isArray(sources) ? sources : allSources;
 
     // Build collector tasks
@@ -331,6 +422,8 @@ serve(async (req) => {
       reddit: () => firecrawlKey ? collectReddit(productName, firecrawlKey) : Promise.resolve([]),
       trustpilot: () => firecrawlKey ? collectTrustpilot(productName, firecrawlKey) : Promise.resolve([]),
       web: () => firecrawlKey ? collectGeneralWeb(productName, firecrawlKey, competitorList) : Promise.resolve([]),
+      youtube: () => youtubeKey ? collectYouTube(productName, youtubeKey) : Promise.resolve([]),
+      googleplay: () => firecrawlKey ? collectGooglePlay(productName, firecrawlKey) : Promise.resolve([]),
     };
 
     // Run enabled collectors in parallel

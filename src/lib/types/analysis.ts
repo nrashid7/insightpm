@@ -63,6 +63,14 @@ export interface AnalysisResult {
   opportunityScore?: OpportunityScore[];
   sourceBreakdown?: SourceBreakdown[];
   feedbackSamples?: FeedbackSample[];
+  clusters?: ClusterData[];
+}
+
+export interface ClusterData {
+  name: string;
+  count: number;
+  avgSentiment: string;
+  samples: string[];
 }
 
 export interface AnalysisInput {
@@ -70,4 +78,5 @@ export interface AnalysisInput {
   website?: string;
   competitors?: string;
   sources?: string[];
+  useCache?: boolean;
 }

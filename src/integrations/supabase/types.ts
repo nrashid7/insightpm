@@ -88,10 +88,13 @@ export type Database = {
       feedback_items: {
         Row: {
           analysis_id: string | null
+          classified_at: string | null
+          cluster: string | null
           collected_at: string
           id: string
           metadata: Json | null
           product_name: string
+          quality_score: number | null
           rating: number | null
           sentiment: string | null
           source: string
@@ -102,10 +105,13 @@ export type Database = {
         }
         Insert: {
           analysis_id?: string | null
+          classified_at?: string | null
+          cluster?: string | null
           collected_at?: string
           id?: string
           metadata?: Json | null
           product_name: string
+          quality_score?: number | null
           rating?: number | null
           sentiment?: string | null
           source: string
@@ -116,10 +122,13 @@ export type Database = {
         }
         Update: {
           analysis_id?: string | null
+          classified_at?: string | null
+          cluster?: string | null
           collected_at?: string
           id?: string
           metadata?: Json | null
           product_name?: string
+          quality_score?: number | null
           rating?: number | null
           sentiment?: string | null
           source?: string
@@ -134,6 +143,89 @@ export type Database = {
             columns: ["analysis_id"]
             isOneToOne: false
             referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitored_products: {
+        Row: {
+          competitors: string | null
+          created_at: string
+          frequency: string
+          id: string
+          is_active: boolean
+          last_run_at: string | null
+          next_run_at: string | null
+          product_name: string
+          sources: Json | null
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          competitors?: string | null
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          next_run_at?: string | null
+          product_name: string
+          sources?: Json | null
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          competitors?: string | null
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          next_run_at?: string | null
+          product_name?: string
+          sources?: Json | null
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      monitoring_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean
+          message: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_products"
             referencedColumns: ["id"]
           },
         ]

@@ -2,3 +2,15 @@ project_id = "syudsfetmvozjltqchqo"
 
 [functions.analyze-product]
 verify_jwt = false
+
+[functions.collect-feedback]
+verify_jwt = false
+
+[functions.classify-feedback]
+verify_jwt = false
+
+[functions.firecrawl-search]
+verify_jwt = false
+
+[functions.run-monitoring]
+verify_jwt = false
