@@ -2,14 +2,24 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import AnimatedCounter from "@/components/ui/animated-counter";
 
 const HeroSection = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-      {/* Background glow */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[300px] bg-chart-2/5 rounded-full blur-[100px]" />
+      {/* Animated gradient mesh background */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-primary/8 rounded-full blur-[140px] animate-pulse-slow" />
+        <div className="absolute bottom-1/3 left-1/4 w-[500px] h-[350px] bg-chart-2/6 rounded-full blur-[120px] animate-float" />
+        <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-accent/5 rounded-full blur-[100px] animate-float-delayed" />
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
+            backgroundSize: "60px 60px",
+          }}
+        />
       </div>
 
       <div className="container mx-auto px-6 relative z-10">
@@ -55,23 +65,46 @@ const HeroSection = () => {
             </a>
           </div>
 
-          {/* Stats */}
+          {/* Dashboard Preview */}
           <motion.div
-            className="mt-20 grid grid-cols-3 gap-8 max-w-lg mx-auto"
+            className="mt-16 mx-auto max-w-3xl"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+          >
+            <div className="relative rounded-xl border border-border bg-card/80 backdrop-blur-sm p-4 shadow-card">
+              {/* Fake dashboard toolbar */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 rounded-full bg-destructive/60" />
+                <div className="w-3 h-3 rounded-full bg-accent/60" />
+                <div className="w-3 h-3 rounded-full bg-chart-4/60" />
+                <div className="flex-1 mx-4 h-6 rounded bg-muted/50" />
+              </div>
+              {/* Fake content rows */}
+              <div className="grid grid-cols-4 gap-3 mb-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-16 rounded-lg bg-muted/30 border border-border/50" />
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2 h-32 rounded-lg bg-muted/20 border border-border/50" />
+                <div className="h-32 rounded-lg bg-muted/20 border border-border/50" />
+              </div>
+              {/* Glow overlay */}
+              <div className="absolute -inset-px rounded-xl bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+            </div>
+          </motion.div>
+
+          {/* Animated Stats */}
+          <motion.div
+            className="mt-12 grid grid-cols-3 gap-8 max-w-lg mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.8 }}
           >
-            {[
-              { value: "10K+", label: "Products Analyzed" },
-              { value: "1M+", label: "Feedback Processed" },
-              { value: "98%", label: "Accuracy Rate" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
-              </div>
-            ))}
+            <AnimatedCounter value="10K+" label="Products Analyzed" />
+            <AnimatedCounter value="1M+" label="Feedback Processed" />
+            <AnimatedCounter value="98%" label="Accuracy Rate" />
           </motion.div>
         </motion.div>
       </div>
