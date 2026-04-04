@@ -29,7 +29,10 @@ const plans = [
 
 const PricingSection = () => {
   return (
-    <section id="pricing" className="py-32 relative">
+    <section id="pricing" className="py-32 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[400px] bg-chart-5/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-0 left-0 w-[300px] h-[300px] bg-primary/4 rounded-full blur-[120px] pointer-events-none" />
       <div className="container mx-auto px-6">
         <motion.div
           className="text-center mb-16"

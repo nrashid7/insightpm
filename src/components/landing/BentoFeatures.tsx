@@ -48,7 +48,11 @@ const features = [
 
 const BentoFeatures = () => {
   return (
-    <section id="features" className="py-32 relative">
+    <section id="features" className="py-32 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute -top-40 -left-40 w-[600px] h-[400px] bg-primary/6 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[300px] bg-chart-2/5 rounded-full blur-[120px] pointer-events-none" />
+
       <div className="container mx-auto px-6">
         <motion.div
           className="text-center mb-16"
