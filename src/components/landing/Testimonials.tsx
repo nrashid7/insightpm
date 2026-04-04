@@ -30,6 +30,9 @@ const logos = [
 const Testimonials = () => {
   return (
     <section className="py-24 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute top-1/2 -right-32 w-[500px] h-[400px] bg-accent/6 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-primary/4 rounded-full blur-[120px] pointer-events-none" />
       {/* Marquee logos */}
       <div className="mb-16 relative">
         <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-background to-transparent z-10" />

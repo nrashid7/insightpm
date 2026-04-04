@@ -91,7 +91,9 @@ const HowItWorksSection = () => {
   const [active, setActive] = useState(0);
 
   return (
-    <section id="how-it-works" className="py-32 relative">
+    <section id="how-it-works" className="py-32 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-chart-2/5 rounded-full blur-[150px] pointer-events-none" />
       <div className="container mx-auto px-6">
         <motion.div
           className="text-center mb-16"
