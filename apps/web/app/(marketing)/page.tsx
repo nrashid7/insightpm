@@ -15,8 +15,8 @@ export default function HomePage() {
       <Hero />
       <DemoCall />
       <AgentShowcase templates={agentTemplates} />
-      <Features />
       <HowItWorks />
+      <Features />
       <Verticals />
       <Testimonials />
       <Pricing />
