@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseServiceRoleKey } from "@/lib/supabase/admin";
 import { getProfile } from "./auth";
 
 export async function syncN8nWorkflows() {
@@ -11,11 +12,7 @@ export async function syncN8nWorkflows() {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!serviceKey) {
-    return { error: "SUPABASE_SERVICE_ROLE_KEY not configured" };
-  }
+  const serviceKey = getSupabaseServiceRoleKey();
 
   const response = await fetch(`${supabaseUrl}/functions/v1/sync-n8n-workflows`, {
     method: "POST",
@@ -53,7 +50,7 @@ export async function testN8nDispatch() {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const serviceKey = getSupabaseServiceRoleKey();
 
   const response = await fetch(`${supabaseUrl}/functions/v1/n8n-dispatch`, {
     method: "POST",

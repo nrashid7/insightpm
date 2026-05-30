@@ -40,7 +40,7 @@ INSERT INTO agent_templates (slug, name, industry, config) VALUES
       "features": ["Book appointments", "Recommend services", "Handle reschedules", "SMS confirmations", "Pricing FAQs"],
       "tagline": "Your salon''s always-on booking coordinator."
     },
-    "voice": {"retell_voice_id": "11labs-Rachel", "elevenlabs_voice_id": "21m00Tcm4TlvDq8ikWAM", "default_provider": "retell"},
+    "voice": {"retell_voice_id": "retell-Willa", "elevenlabs_voice_id": "21m00Tcm4TlvDq8ikWAM", "default_provider": "retell"},
     "system_prompt": "You are Zia, an AI booking assistant for {{business_name}}, a salon and spa.",
     "objection_handlers": [],
     "booking_rules": [],
@@ -65,7 +65,7 @@ INSERT INTO agent_templates (slug, name, industry, config) VALUES
       "features": ["Triage service calls", "Capture job details", "Schedule appointments", "Emergency dispatch", "Lead qualification"],
       "tagline": "Your 24/7 dispatch desk for home services."
     },
-    "voice": {"retell_voice_id": "11labs-Adam", "elevenlabs_voice_id": "pNInz6obpgDQGcFmaJgB", "default_provider": "retell"},
+    "voice": {"retell_voice_id": "cartesia-Adam", "elevenlabs_voice_id": "pNInz6obpgDQGcFmaJgB", "default_provider": "retell"},
     "system_prompt": "You are Sparky, an AI dispatcher for {{business_name}}, a home services company.",
     "objection_handlers": [],
     "booking_rules": [],

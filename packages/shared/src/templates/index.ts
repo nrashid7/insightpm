@@ -100,7 +100,7 @@ export const ziaTemplate: AgentTemplateConfig = {
     tagline: "Your salon's always-on booking coordinator.",
   },
   voice: {
-    retell_voice_id: "11labs-Rachel",
+    retell_voice_id: "retell-Willa",
     elevenlabs_voice_id: "21m00Tcm4TlvDq8ikWAM",
     default_provider: "retell",
   },
@@ -167,7 +167,7 @@ export const sparkyTemplate: AgentTemplateConfig = {
     tagline: "Your 24/7 dispatch desk for home services.",
   },
   voice: {
-    retell_voice_id: "11labs-Adam",
+    retell_voice_id: "cartesia-Adam",
     elevenlabs_voice_id: "pNInz6obpgDQGcFmaJgB",
     default_provider: "retell",
   },

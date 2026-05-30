@@ -46,8 +46,10 @@ export async function verifyRetellSignature(
   req: Request,
   rawBody: string,
 ): Promise<void> {
-  const secret = Deno.env.get("RETELL_WEBHOOK_SECRET");
-  if (!secret) return;
+  const secret = Deno.env.get("RETELL_WEBHOOK_SECRET") ?? Deno.env.get("RETELL_API_KEY");
+  if (!secret) {
+    throw new AppError("Missing RETELL_WEBHOOK_SECRET or RETELL_API_KEY", 500, "CONFIG_ERROR");
+  }
 
   const signature = req.headers.get("x-retell-signature");
   const valid = await verifyHmacSignature(rawBody, signature, secret);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getSupabaseServiceRoleKey } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -10,13 +11,13 @@ export async function POST(request: Request) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const serviceKey = getSupabaseServiceRoleKey();
 
     const response = await fetch(`${supabaseUrl}/functions/v1/voice-preview`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceKey ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+        Authorization: `Bearer ${serviceKey}`,
       },
       body: JSON.stringify({
         voice_id,

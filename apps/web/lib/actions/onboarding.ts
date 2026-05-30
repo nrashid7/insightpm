@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { callPreferencesSchema, voiceSelectionSchema } from "@businessvoice/shared";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseServiceRoleKey } from "@/lib/supabase/admin";
 import { getBusiness } from "./business";
 import { trackServerEvent } from "@/lib/analytics-server";
 
@@ -90,13 +91,13 @@ export async function saveVoiceSelection(formData: FormData) {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = getSupabaseServiceRoleKey();
 
   const response = await fetch(`${supabaseUrl}/functions/v1/retell-create-agent`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${serviceKey ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+      Authorization: `Bearer ${serviceKey}`,
     },
     body: JSON.stringify({
       business_id: business.id,

@@ -109,7 +109,8 @@ export async function createRetellPhoneNumber(
   return await retellFetch("/create-phone-number", {
     method: "POST",
     body: JSON.stringify({
-      agent_id: agentId,
+      inbound_agents: [{ agent_id: agentId, weight: 1 }],
+      outbound_agents: [{ agent_id: agentId, weight: 1 }],
       ...(areaCode ? { area_code: areaCode } : {}),
     }),
   });

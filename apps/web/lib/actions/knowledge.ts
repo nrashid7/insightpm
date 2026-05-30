@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseServiceRoleKey } from "@/lib/supabase/admin";
 import { getBusiness } from "./business";
 
 export async function getKnowledgeDocuments() {
@@ -46,11 +47,12 @@ export async function uploadKnowledgeDocument(formData: FormData) {
   if (error) return { error: error.message };
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey = getSupabaseServiceRoleKey();
   await fetch(`${supabaseUrl}/functions/v1/knowledge-ingest`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+      Authorization: `Bearer ${serviceKey}`,
     },
     body: JSON.stringify({
       business_id: business.id,

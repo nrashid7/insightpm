@@ -17,7 +17,7 @@ Set the same `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as Supabase Edge Fun
 | Variable | Description |
 |----------|-------------|
 | `RETELL_API_KEY` | Retell AI API key |
-| `RETELL_WEBHOOK_SECRET` | Secret for verifying Retell webhook signatures |
+| `RETELL_WEBHOOK_SECRET` | Optional override for verifying Retell webhook signatures; defaults to `RETELL_API_KEY` |
 | `ELEVENLABS_API_KEY` | ElevenLabs API key for premium voices |
 
 ## SMS (Twilio)
