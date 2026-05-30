@@ -1,0 +1,68 @@
+{
+  "name": "BusinessVoice - HubSpot Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hubspot-sync",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "hubspot-sync"
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "createOrUpdate",
+        "email": "={{ $json.body.contact.email }}",
+        "additionalFields": {
+          "firstname": "={{ $json.body.contact.name?.split(' ')[0] }}",
+          "lastname": "={{ $json.body.contact.name?.split(' ').slice(1).join(' ') }}",
+          "phone": "={{ $json.body.contact.phone }}"
+        }
+      },
+      "id": "hubspot-contact",
+      "name": "HubSpot Create Contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [470, 300],
+      "credentials": { "hubspotApi": { "id": "1", "name": "HubSpot" } }
+    },
+    {
+      "parameters": {
+        "resource": "note",
+        "operation": "create",
+        "contactId": "={{ $json.id }}",
+        "note": "Call Summary: {{ $json.body.call_summary }}\n\nLead Score: {{ $json.body.lead_score }}"
+      },
+      "id": "hubspot-note",
+      "name": "HubSpot Add Note",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "credentials": { "hubspotApi": { "id": "1", "name": "HubSpot" } }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true } }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "HubSpot Create Contact", "type": "main", "index": 0 }]] },
+    "HubSpot Create Contact": { "main": [[{ "node": "HubSpot Add Note", "type": "main", "index": 0 }]] },
+    "HubSpot Add Note": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "BusinessVoice" }]
+}

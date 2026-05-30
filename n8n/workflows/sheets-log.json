@@ -1,0 +1,60 @@
+{
+  "name": "BusinessVoice - Google Sheets Log",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sheets-log",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "sheets-log"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "={{ $json.body.metadata.sheet_id }}",
+        "sheetName": "Calls",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.toISO() }}",
+            "Business ID": "={{ $json.body.business_id }}",
+            "Caller": "={{ $json.body.contact.name }}",
+            "Phone": "={{ $json.body.contact.phone }}",
+            "Summary": "={{ $json.body.call_summary }}",
+            "Lead Score": "={{ $json.body.lead_score }}",
+            "Outcome": "={{ $json.body.metadata.outcome }}"
+          }
+        }
+      },
+      "id": "sheets-append",
+      "name": "Google Sheets Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [470, 300],
+      "credentials": { "googleSheetsOAuth2Api": { "id": "1", "name": "Google Sheets" } }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true } }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [690, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Google Sheets Append", "type": "main", "index": 0 }]] },
+    "Google Sheets Append": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "BusinessVoice" }]
+}

@@ -1,0 +1,82 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import {
+  AppError,
+  createServiceClient,
+  errorResponse,
+  jsonResponse,
+  parseJsonBody,
+} from "../_shared/errors.ts";
+
+interface QualifyLeadRequest {
+  business_id: string;
+  call_id?: string;
+  retell_call_id?: string;
+  name?: string;
+  email?: string;
+  company?: string;
+  need?: string;
+  timeline?: string;
+  budget?: string;
+  lead_score?: number;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "authorization, content-type",
+      },
+    });
+  }
+
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  try {
+    const body = await parseJsonBody<QualifyLeadRequest>(req);
+    if (!body.business_id) {
+      throw new AppError("business_id is required", 400);
+    }
+
+    const supabase = createServiceClient();
+    const qualificationData = {
+      name: body.name,
+      email: body.email,
+      company: body.company,
+      need: body.need,
+      timeline: body.timeline,
+      budget: body.budget,
+      lead_score: body.lead_score ?? 50,
+      qualified_at: new Date().toISOString(),
+    };
+
+    let callId = body.call_id;
+    if (!callId && body.retell_call_id) {
+      const { data: call } = await supabase
+        .from("calls")
+        .select("id")
+        .eq("retell_call_id", body.retell_call_id)
+        .maybeSingle();
+      callId = call?.id;
+    }
+
+    if (callId) {
+      await supabase.from("calls").update({
+        lead_score: body.lead_score ?? 50,
+        outcome: "qualified_lead",
+        qualification_data: qualificationData,
+      }).eq("id", callId);
+    }
+
+    return jsonResponse({
+      success: true,
+      message: "Lead qualification recorded",
+      lead_score: body.lead_score ?? 50,
+    });
+  } catch (error) {
+    return errorResponse(error);
+  }
+});

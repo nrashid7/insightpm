@@ -1,0 +1,121 @@
+{
+  "name": "BusinessVoice - Call Completed Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "call-completed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "call-completed"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.event }}",
+              "operation": "equal",
+              "value2": "call.completed"
+            }
+          ]
+        }
+      },
+      "id": "if-call-completed",
+      "name": "Is Call Completed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.outcome }}",
+              "operation": "equal",
+              "value2": "missed"
+            }
+          ]
+        }
+      },
+      "id": "if-missed",
+      "name": "Is Missed Call",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/sms-follow-up",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "business_id", "value": "={{ $json.body.business_id }}" },
+            { "name": "phone", "value": "={{ $json.body.contact.phone }}" },
+            { "name": "type", "value": "missed_call" }
+          ]
+        }
+      },
+      "id": "trigger-sms",
+      "name": "Trigger SMS Follow-Up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [910, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_WEBHOOK_BASE_URL }}/hubspot-sync",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "payload", "value": "={{ JSON.stringify($json.body) }}" }
+          ]
+        }
+      },
+      "id": "trigger-hubspot",
+      "name": "Trigger HubSpot Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true } }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1130, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Is Call Completed", "type": "main", "index": 0 }]] },
+    "Is Call Completed": {
+      "main": [
+        [{ "node": "Is Missed Call", "type": "main", "index": 0 }],
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Missed Call": {
+      "main": [
+        [{ "node": "Trigger SMS Follow-Up", "type": "main", "index": 0 }],
+        [{ "node": "Trigger HubSpot Sync", "type": "main", "index": 0 }]
+      ]
+    },
+    "Trigger SMS Follow-Up": { "main": [[{ "node": "Trigger HubSpot Sync", "type": "main", "index": 0 }]] },
+    "Trigger HubSpot Sync": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "BusinessVoice" }]
+}

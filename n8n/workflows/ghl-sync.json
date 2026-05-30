@@ -1,0 +1,51 @@
+{
+  "name": "BusinessVoice - GoHighLevel Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ghl-sync",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "ghl-sync"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://rest.gohighlevel.com/v1/contacts/",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "goHighLevelApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"firstName\": $json.body.contact.name?.split(' ')[0], \"lastName\": $json.body.contact.name?.split(' ').slice(1).join(' '), \"phone\": $json.body.contact.phone, \"email\": $json.body.contact.email, \"tags\": [\"businessvoice-lead\"], \"source\": \"BusinessVoice AI\" } }}"
+      },
+      "id": "ghl-create",
+      "name": "GHL Create Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true } }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [690, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "GHL Create Contact", "type": "main", "index": 0 }]] },
+    "GHL Create Contact": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "BusinessVoice" }]
+}

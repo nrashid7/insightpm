@@ -1,0 +1,21 @@
+{
+  "name": "businessvoice-ai",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "setup:n8n": "powershell -ExecutionPolicy Bypass -File scripts/apply-n8n-railway.ps1",
+    "deploy:n8n": "node scripts/deploy-n8n-workflows.mjs"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  }
+}

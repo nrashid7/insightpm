@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.turbo/
+dist/
+.env
+.env.local
+.env*.local
+.vercel
+apps/web/.git-nested-backup/
+*.log
+.DS_Store
+supabase/.temp/

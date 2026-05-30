@@ -1,0 +1,10 @@
+# BusinessVoice AI — linked Supabase project
+# Dashboard: https://supabase.com/dashboard/project/yvyhiqknvffnwrupfwmd
+
+project_id = "yvyhiqknvffnwrupfwmd"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
