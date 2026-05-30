@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         voice_id,
-        text: text ?? "Hi! I'm your AI receptionist from BusinessVoice AI. How can I help you today?",
+        text: text ?? "Hi! I'm your Sigyn AI voice agent. How can I help you today?",
       }),
     });
 

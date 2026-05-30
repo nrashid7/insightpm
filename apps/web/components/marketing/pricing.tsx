@@ -1,143 +1,111 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const plans = [
   {
-    name: "Starter",
-    price: 99,
-    description: "Perfect for solo businesses getting started with AI.",
-    minutes: 200,
+    name: "Launch",
+    price: "Starter",
+    description: "For one location that needs phone coverage fast.",
     features: [
-      "1 AI Employee",
-      "200 minutes/month",
-      "Knowledge base (5 docs)",
-      "Google Calendar sync",
-      "Call transcripts",
-      "Email support",
+      "1 configured AI voice agent",
+      "Business-hours and after-hours routing",
+      "Knowledge base setup",
+      "Calendar or callback workflow",
+      "Call summaries and transcripts",
     ],
-    cta: "Start Free Trial",
-    plan: "starter",
     popular: false,
   },
   {
-    name: "Pro",
-    price: 249,
-    description: "For growing businesses that need more capacity.",
-    minutes: 600,
+    name: "Growth",
+    price: "Most popular",
+    description: "For busy teams that need booking, follow-up, and lead capture.",
     features: [
-      "3 AI Employees",
-      "600 minutes/month",
-      "Unlimited knowledge docs",
-      "All calendar integrations",
-      "CRM sync (HubSpot, GHL)",
-      "Lead scoring & analytics",
-      "Priority support",
+      "Up to 3 configured agent roles",
+      "SMS confirmations and follow-ups",
+      "CRM or lead handoff workflow",
+      "Priority tuning after launch",
+      "Monthly performance review",
     ],
-    cta: "Start Free Trial",
-    plan: "pro",
     popular: true,
   },
   {
-    name: "Enterprise",
-    price: null,
-    description: "Custom solutions for high-volume operations.",
-    minutes: null,
+    name: "Custom",
+    price: "Tailored",
+    description: "For multi-location or high-volume businesses.",
     features: [
-      "Unlimited AI Employees",
-      "Custom minute packages",
-      "Dedicated account manager",
-      "Custom voice cloning",
-      "SLA & uptime guarantee",
-      "White-label options",
-      "API access",
+      "Custom call flows and escalations",
+      "Multiple departments or locations",
+      "Advanced integrations",
+      "Dedicated launch support",
+      "Custom reporting requirements",
     ],
-    cta: "Contact Sales",
     popular: false,
   },
 ];
 
 export function Pricing() {
   return (
-    <section id="pricing" className="py-24">
-      <div className="mx-auto max-w-7xl px-4">
+    <section id="pricing" className="section-shell bg-white px-4">
+      <div className="mx-auto max-w-7xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mb-14 text-center"
         >
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Simple, <span className="gradient-text">Transparent Pricing</span>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">
+            Service packages
+          </p>
+          <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
+            Start with the coverage you need.
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            14-day free trial on all plans. No credit card required.
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+            Pricing is finalized after the demo because call volume, integrations, and agent complexity vary by business.
           </p>
         </motion.div>
 
-        <div className="grid gap-8 md:grid-cols-3">
-          {plans.map((plan, i) => (
+        <div className="grid gap-6 md:grid-cols-3">
+          {plans.map((plan, index) => (
             <motion.div
               key={plan.name}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: index * 0.08 }}
             >
               <Card
                 className={cn(
-                  "h-full relative",
-                  plan.popular && "gradient-border glow"
+                  "relative h-full shadow-sm",
+                  plan.popular && "border-primary shadow-xl shadow-blue-950/10"
                 )}
               >
                 {plan.popular && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2" variant="default">
-                    Most Popular
+                    Recommended
                   </Badge>
                 )}
                 <CardHeader>
-                  <CardTitle>{plan.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{plan.description}</p>
-                  <div className="mt-4">
-                    {plan.price !== null ? (
-                      <>
-                        <span className="text-4xl font-bold">${plan.price}</span>
-                        <span className="text-muted-foreground">/month</span>
-                      </>
-                    ) : (
-                      <span className="text-4xl font-bold">Custom</span>
-                    )}
-                  </div>
+                  <CardTitle className="text-2xl font-black text-slate-950">{plan.name}</CardTitle>
+                  <p className="text-sm leading-6 text-muted-foreground">{plan.description}</p>
+                  <p className="pt-4 text-3xl font-black text-slate-950">{plan.price}</p>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <ul className="space-y-3">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                        {f}
+                <CardContent className="grid gap-6">
+                  <ul className="grid gap-3">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm text-slate-700">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        {feature}
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    variant={plan.popular ? "gradient" : "outline"}
-                    className="w-full"
-                    asChild
-                  >
-                    <Link
-                      href={
-                        plan.price !== null
-                          ? `/api/stripe/checkout?plan=${"plan" in plan ? plan.plan : "starter"}`
-                          : "#"
-                      }
-                    >
-                      {plan.cta}
-                    </Link>
+                  <Button variant={plan.popular ? "default" : "outline"} className="w-full" asChild>
+                    <a href="#demo">Book a Demo</a>
                   </Button>
                 </CardContent>
               </Card>

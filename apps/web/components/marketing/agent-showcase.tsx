@@ -10,19 +10,22 @@ interface AgentShowcaseProps {
 
 export function AgentShowcase({ templates }: AgentShowcaseProps) {
   return (
-    <section id="agents" className="py-24 relative">
+    <section id="agents" className="section-shell relative px-4">
       <div className="mx-auto max-w-7xl px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mb-14 text-center"
         >
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Meet Your <span className="gradient-text">AI Team</span>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">
+            Prebuilt voice agents
+          </p>
+          <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
+            Hire the agent your phones need first.
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Pre-trained AI employees ready to work for your business. Pick one, customize, and go live in minutes.
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+            Each Sigyn agent starts with a proven call role, then gets tailored to your hours, services, scripts, and handoff rules.
           </p>
         </motion.div>
 

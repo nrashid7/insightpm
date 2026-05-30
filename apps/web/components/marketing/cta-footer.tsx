@@ -1,41 +1,37 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, PhoneCall } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function CtaFooter() {
   return (
-    <section className="py-24">
-      <div className="mx-auto max-w-4xl px-4">
+    <section className="dark-band px-4 py-24">
+      <div className="mx-auto max-w-4xl text-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="relative overflow-hidden rounded-3xl glass-card p-12 md:p-16 text-center glow"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-cyan-400/20" />
-          <div className="relative">
-            <h2 className="text-3xl md:text-5xl font-bold">
-              Ready to Hire Your
-              <br />
-              <span className="gradient-text">First AI Employee?</span>
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground max-w-xl mx-auto">
-              Join hundreds of businesses answering every call with AI. Start your 14-day free trial today.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button variant="gradient" size="lg" asChild>
-                <Link href="/signup">
-                  Get Started Free
-                  <ArrowRight className="ml-1" />
-                </Link>
-              </Button>
-              <Button variant="glass" size="lg" asChild>
-                <a href="#demo">Try Demo Call</a>
-              </Button>
-            </div>
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-lg bg-white text-slate-950">
+            <PhoneCall className="h-7 w-7" />
+          </div>
+          <h2 className="text-4xl font-black tracking-tight md:text-6xl">
+            Your phones are ringing right now.
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-300">
+            Every unanswered call is a customer choosing whether to wait, leave a voicemail, or call the next business. Sigyn gives them a better path.
+          </p>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Button size="lg" asChild>
+              <a href="#demo">
+                Book a Demo
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
+            <Button variant="outline" size="lg" className="border-white/20 bg-white/10 text-white hover:bg-white hover:text-slate-950" asChild>
+              <a href="#agents">Meet the Agents</a>
+            </Button>
           </div>
         </motion.div>
       </div>

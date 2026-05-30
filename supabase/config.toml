@@ -1,7 +1,7 @@
 # BusinessVoice AI — linked Supabase project
-# Dashboard: https://supabase.com/dashboard/project/yvyhiqknvffnwrupfwmd
+# Dashboard: https://supabase.com/dashboard/project/wtrqpnzacuaroxluxwfa
 
-project_id = "yvyhiqknvffnwrupfwmd"
+project_id = "wtrqpnzacuaroxluxwfa"
 
 [api]
 enabled = true

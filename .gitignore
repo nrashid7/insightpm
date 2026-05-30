@@ -10,3 +10,6 @@ apps/web/.git-nested-backup/
 *.log
 .DS_Store
 supabase/.temp/
+supabase/supabase/.temp/
+
+.vercel

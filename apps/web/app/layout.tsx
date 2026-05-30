@@ -15,20 +15,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BusinessVoice AI - Hire Your First AI Employee",
+  title: "Sigyn - AI Voice Agents for Small Businesses",
   description:
-    "AI-powered phone agents that answer every call, book appointments, qualify leads, and dispatch your team — 24/7. Hire your first AI employee in minutes.",
+    "Sigyn provides ready-built AI voice agents that answer calls, book appointments, qualify leads, and support small businesses 24/7.",
   keywords: [
     "AI phone agent",
     "virtual receptionist",
-    "AI employee",
+    "AI voice agent",
     "call answering service",
     "appointment booking AI",
   ],
   openGraph: {
-    title: "BusinessVoice AI - Hire Your First AI Employee",
+    title: "Sigyn - AI Voice Agents for Small Businesses",
     description:
-      "Never miss a call again. AI employees that answer, book, and qualify — 24/7.",
+      "Book more customers and miss fewer calls with ready-built AI voice agents for small businesses.",
     type: "website",
   },
 };
@@ -41,7 +41,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Suspense fallback={null}>

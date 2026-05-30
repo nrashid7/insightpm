@@ -13,8 +13,8 @@ export default function HomePage() {
   return (
     <>
       <Hero />
-      <AgentShowcase templates={agentTemplates} />
       <DemoCall />
+      <AgentShowcase templates={agentTemplates} />
       <Features />
       <HowItWorks />
       <Verticals />

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Scissors, Wrench, Building2, Stethoscope, Briefcase } from "lucide-react";
+import { Briefcase, Building2, Scissors, Stethoscope, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -10,77 +10,78 @@ const verticals = [
     icon: Scissors,
     name: "Salons & Spas",
     agent: "Zia",
-    description: "Book appointments, answer service questions, and keep your chairs full.",
-    stats: "40% more bookings",
+    description: "Book appointments, explain services, handle reschedules, and reduce front-desk interruptions.",
+    stat: "Booking coverage",
   },
   {
     icon: Wrench,
     name: "Home Services",
     agent: "Sparky",
-    description: "Triage HVAC, plumbing, and electrical calls. Dispatch emergencies instantly.",
-    stats: "3x faster dispatch",
+    description: "Triage calls, capture addresses, flag urgent jobs, and route emergency issues quickly.",
+    stat: "Dispatch support",
   },
   {
     icon: Building2,
-    name: "General SMB",
+    name: "Local Services",
     agent: "Dexter",
-    description: "Professional reception for any business. Route calls, take messages, answer FAQs.",
-    stats: "100% answer rate",
+    description: "Answer FAQs, take messages, route calls, and keep every caller feeling acknowledged.",
+    stat: "Reception desk",
   },
   {
     icon: Stethoscope,
     name: "Medical & Dental",
     agent: "Sunny",
-    description: "Schedule patient appointments with calendar sync and SMS reminders.",
-    stats: "60% fewer no-shows",
+    description: "Coordinate scheduling requests, confirmations, reminders, and policy questions.",
+    stat: "Appointment flow",
   },
   {
     icon: Briefcase,
     name: "Sales & Agencies",
     agent: "Bella",
-    description: "Qualify inbound leads, score prospects, and sync to your CRM automatically.",
-    stats: "2x qualified leads",
+    description: "Ask qualifying questions, collect details, score inbound calls, and tee up callbacks.",
+    stat: "Lead capture",
   },
 ];
 
 export function Verticals() {
   return (
-    <section id="verticals" className="py-24">
-      <div className="mx-auto max-w-7xl px-4">
+    <section id="verticals" className="section-shell px-4">
+      <div className="mx-auto max-w-7xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mb-14 text-center"
         >
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Built for <span className="gradient-text">Your Industry</span>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary">
+            Small business ready
+          </p>
+          <h2 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
+            Built around the calls you actually get.
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Industry-specific AI employees trained on real business scenarios.
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+            Sigyn is not a blank chatbot. Each agent starts with an operating role that matches common small-business call patterns.
           </p>
         </motion.div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {verticals.map((v, i) => (
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-5">
+          {verticals.map((vertical, index) => (
             <motion.div
-              key={v.name}
+              key={vertical.name}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
+              transition={{ delay: index * 0.05 }}
             >
-              <Card className="h-full group hover:glow transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 group-hover:bg-indigo-500/20 transition-colors">
-                      <v.icon className="h-6 w-6 text-indigo-400" />
-                    </div>
-                    <Badge variant="success">{v.stats}</Badge>
+              <Card className="h-full shadow-sm">
+                <CardContent className="p-5">
+                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-secondary text-primary">
+                    <vertical.icon className="h-5 w-5" />
                   </div>
-                  <h3 className="text-lg font-semibold">{v.name}</h3>
-                  <Badge variant="outline" className="mt-2">Powered by {v.agent}</Badge>
-                  <p className="mt-3 text-sm text-muted-foreground">{v.description}</p>
+                  <Badge variant="success">{vertical.stat}</Badge>
+                  <h3 className="mt-4 text-lg font-black text-slate-950">{vertical.name}</h3>
+                  <p className="mt-1 text-sm font-semibold text-primary">Powered by {vertical.agent}</p>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{vertical.description}</p>
                 </CardContent>
               </Card>
             </motion.div>
