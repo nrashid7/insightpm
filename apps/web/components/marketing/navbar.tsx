@@ -19,7 +19,7 @@ export function Navbar() {
       animate={{ y: 0, opacity: 1 }}
       className="fixed left-0 top-0 z-50 w-screen px-4 py-4"
     >
-      <nav className="glass-strong mx-auto flex w-full max-w-[calc(100vw-2rem)] items-center justify-between rounded-lg px-3 py-3 md:max-w-7xl md:px-5">
+      <nav className="glass-strong mx-auto flex w-fit max-w-[calc(100vw-2rem)] items-center justify-between rounded-lg px-3 py-3 md:w-full md:max-w-7xl md:px-5">
         <Link href="/" className="flex min-h-11 items-center gap-3" aria-label="Sigyn home">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-white">
             <PhoneCall className="h-5 w-5" />
@@ -53,9 +53,6 @@ export function Navbar() {
           </Button>
         </div>
 
-        <Button size="sm" className="ml-auto md:hidden" asChild>
-          <a href="#demo">Demo</a>
-        </Button>
       </nav>
     </motion.header>
   );
