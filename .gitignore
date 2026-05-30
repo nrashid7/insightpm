@@ -1,6 +1,7 @@
 node_modules/
 .next/
 .turbo/
+tmp/
 dist/
 .env
 .env.local

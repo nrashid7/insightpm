@@ -29,15 +29,17 @@ export function Hero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
-          className="relative z-10"
+          className="relative z-10 min-w-0"
         >
           <Badge variant="secondary" className="mb-5 px-3 py-1.5">
             <PhoneCall className="mr-1.5 h-3.5 w-3.5 text-primary" />
             AI voice agents built for small businesses
           </Badge>
 
-          <h1 className="max-w-3xl text-5xl font-black leading-[1.02] tracking-tight text-slate-950 md:text-7xl">
-            Your business never misses the phone again.
+          <h1 className="max-w-[calc(100vw-2rem)] text-[2rem] font-black leading-[1.06] tracking-tight text-slate-950 min-[420px]:text-4xl sm:max-w-3xl sm:text-5xl md:text-7xl">
+            <span className="block sm:inline">Your business</span>{" "}
+            <span className="block sm:inline">never misses</span>{" "}
+            <span className="block sm:inline">the phone again.</span>
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground md:text-xl">
@@ -73,7 +75,7 @@ export function Hero() {
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.65, delay: 0.1 }}
-          className="relative"
+          className="relative min-w-0"
         >
           <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-blue-200/55 via-white to-amber-100/80 blur-2xl" />
           <div className="relative overflow-hidden rounded-2xl border border-white bg-white shadow-2xl shadow-blue-950/12">
@@ -83,7 +85,7 @@ export function Hero() {
               width={1792}
               height={1024}
               priority
-              className="aspect-[1.55/1] h-auto w-full object-cover object-center"
+              className="aspect-[1.08/1] h-auto w-full object-cover object-[48%_center] sm:aspect-[1.55/1]"
             />
             <div className="absolute left-4 top-4 rounded-lg bg-white/90 px-3 py-2 text-sm font-semibold shadow-lg backdrop-blur">
               Live call handled
@@ -95,7 +97,7 @@ export function Hero() {
         </motion.div>
       </div>
 
-      <div className="mx-auto mt-10 max-w-7xl border-y border-border bg-white/60 px-4 py-4 backdrop-blur">
+      <div className="mx-auto mt-10 max-w-7xl overflow-hidden border-y border-border bg-white/60 px-4 py-4 backdrop-blur">
         <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
           <span className="font-semibold text-slate-800">Built for:</span>
           {verticals.map((vertical) => (
