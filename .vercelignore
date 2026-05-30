@@ -1,0 +1,14 @@
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+.next
+apps/*/.next
+.turbo
+dist
+build
+coverage
+.env
+.env.*
+*.log
+supabase/.temp
+supabase/supabase/.temp
