@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCors } from "../_shared/cors.ts";
 import { validateClassifyInput, ValidationError } from "../_shared/validation.ts";
-import { verifyInternalSecret } from "../_shared/auth.ts";
+import { UnauthorizedError, verifyInternalSecret } from "../_shared/auth.ts";
 import { checkRateLimit, getRateLimitKey } from "../_shared/rate-limit.ts";
 import { withRetry } from "../_shared/retry.ts";
 import { initLogger, logger } from "../_shared/logger.ts";
@@ -249,7 +249,7 @@ Use the classify_feedback tool to return your classifications.`,
     );
   } catch (e) {
     logger.error("classify-feedback error", { error: e instanceof Error ? e.message : String(e) });
-    const status = e instanceof ValidationError ? 400 : 500;
+    const status = e instanceof UnauthorizedError ? 401 : e instanceof ValidationError ? 400 : 500;
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }

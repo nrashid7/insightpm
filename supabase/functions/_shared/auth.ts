@@ -1,30 +1,45 @@
+export class UnauthorizedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnauthorizedError";
+  }
+}
+
+/**
+ * Compares a caller-supplied credential against the expected one without
+ * leaking how many leading characters matched.
+ */
+function secretsMatch(actual: string | null, expected: string | undefined): boolean {
+  if (!actual || !expected) return false;
+
+  let diff = actual.length ^ expected.length;
+  for (let i = 0; i < expected.length; i++) {
+    diff |= expected.charCodeAt(i) ^ actual.charCodeAt(i % actual.length);
+  }
+  return diff === 0;
+}
+
+function bearerToken(req: Request): string {
+  return (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+}
+
 export function verifyInternalSecret(req: Request): void {
-  const secret = req.headers.get("x-internal-secret");
-  const expected = Deno.env.get("INTERNAL_FUNCTION_SECRET");
-  if (!secret || !expected || secret !== expected) {
-    throw new Error("Unauthorized: invalid internal secret");
+  if (!secretsMatch(req.headers.get("x-internal-secret"), Deno.env.get("INTERNAL_FUNCTION_SECRET"))) {
+    throw new UnauthorizedError("Unauthorized: invalid internal secret");
   }
 }
 
 export function verifyServiceRole(req: Request): void {
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!token || !expected || token !== expected) {
-    throw new Error("Unauthorized: service role required");
+  if (!secretsMatch(bearerToken(req), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))) {
+    throw new UnauthorizedError("Unauthorized: service role required");
   }
 }
 
 export function isServiceRoleRequest(req: Request): boolean {
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  return !!token && !!expected && token === expected;
+  return secretsMatch(bearerToken(req), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
 export function isInternalMonitoringRequest(req: Request): boolean {
   if (!isServiceRoleRequest(req)) return false;
-  const secret = req.headers.get("x-internal-secret");
-  const expected = Deno.env.get("INTERNAL_FUNCTION_SECRET");
-  return !!secret && !!expected && secret === expected;
+  return secretsMatch(req.headers.get("x-internal-secret"), Deno.env.get("INTERNAL_FUNCTION_SECRET"));
 }

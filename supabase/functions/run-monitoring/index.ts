@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCors } from "../_shared/cors.ts";
-import { verifyServiceRole } from "../_shared/auth.ts";
+import { UnauthorizedError, verifyServiceRole } from "../_shared/auth.ts";
 import { checkRateLimit, getRateLimitKey } from "../_shared/rate-limit.ts";
 import { initLogger, logger } from "../_shared/logger.ts";
 
@@ -198,9 +198,10 @@ serve(async (req) => {
     );
   } catch (e) {
     logger.error("run-monitoring error", { error: e instanceof Error ? e.message : String(e) });
+    const status = e instanceof UnauthorizedError ? 401 : 500;
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
