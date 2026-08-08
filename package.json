@@ -17,6 +17,7 @@
     "verify:live": "node scripts/verify-live-deployment.mjs",
     "secrets:sync": "node scripts/push-supabase-secrets.mjs",
     "secrets:push": "node scripts/push-supabase-secrets.mjs",
+    "stripe:setup": "node scripts/setup-stripe-test.mjs",
     "deploy:db": "supabase db push",
     "deploy:functions": "supabase functions deploy analyze-product collect-feedback classify-feedback run-monitoring collect-market-signals stripe-checkout stripe-portal stripe-webhook",
     "smoke": "npm run typecheck && npm test && npm run build"

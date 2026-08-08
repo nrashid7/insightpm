@@ -8,6 +8,7 @@ import { withRetry } from "../_shared/retry.ts";
 import { initLogger, logger } from "../_shared/logger.ts";
 import {
   CLASSIFY_MODEL,
+  aiProviderErrorResponse,
   openRouterChatCompletion,
   requireOpenRouterApiKey,
 } from "../_shared/ai.ts";
@@ -168,6 +169,8 @@ Use the classify_feedback tool to return your classifications.`,
         );
 
         if (!response.ok) {
+          const special = aiProviderErrorResponse(response.status, corsHeaders);
+          if (special && allClassifications.length === 0) return special;
           logger.error("AI classification batch failed", { status: response.status });
           continue;
         }
