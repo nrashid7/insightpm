@@ -15,7 +15,7 @@ InsightPM is a product feedback intelligence platform that scrapes, classifies, 
 | Routing | React Router v6 |
 | State/Data | TanStack React Query |
 | Backend | Supabase (PostgreSQL, Auth, Edge Functions) |
-| AI | Lovable AI Gateway (Gemini models) |
+| AI | OpenRouter (Gemini models) |
 | Scraping | Firecrawl API |
 
 ## Project Structure
@@ -146,7 +146,7 @@ interface AnalysisResult {
 | Secret | Purpose |
 |--------|---------|
 | SUPABASE_SERVICE_ROLE_KEY | Server-side DB access |
-| LOVABLE_API_KEY | AI Gateway access |
+| OPENROUTER_API_KEY | OpenRouter AI access |
 | FIRECRAWL_API_KEY | Web scraping |
 | SUPABASE_URL | Internal Supabase URL |
 | SUPABASE_ANON_KEY | Anon key for edge functions |

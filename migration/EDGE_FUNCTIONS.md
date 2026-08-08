@@ -27,7 +27,7 @@
 
 ## classify-feedback
 - **Purpose**: AI batch processor for sentiment & clustering
-- **Model**: Gemini via Lovable AI Gateway
+- **Model**: Gemini via OpenRouter
 
 ## collect-market-signals
 - **Purpose**: Industry signals (Polymarket, Reddit/HN/GitHub/YouTube; TikTok/X via ScrapeCreators)

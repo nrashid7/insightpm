@@ -8,6 +8,12 @@ import { withRetry } from "../_shared/retry.ts";
 import { initLogger, logger } from "../_shared/logger.ts";
 import { isInternalMonitoringRequest } from "../_shared/auth.ts";
 import { getUserSubscription, assertCanAnalyze } from "../_shared/subscription.ts";
+import {
+  ANALYZE_MODEL,
+  aiProviderErrorResponse,
+  openRouterChatCompletion,
+  requireOpenRouterApiKey,
+} from "../_shared/ai.ts";
 
 // Sanitize AI-generated strings: strip non-printable and common encoding artifacts
 function sanitizeString(s: string): string {
@@ -123,8 +129,7 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const openRouterApiKey = requireOpenRouterApiKey();
 
     const competitorList = competitors
       ? competitors.split(",").map((c: string) => c.trim()).filter(Boolean)
@@ -380,146 +385,146 @@ Provide a comprehensive product intelligence analysis with feedback clusters${ha
 
     const response = await withRetry(
       async () => {
-        const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
+        const res = await openRouterChatCompletion(
           {
-            type: "function",
-            function: {
-              name: "analyze_product",
-              description: "Return structured product analysis data",
-              parameters: {
-                type: "object",
-                properties: {
-                  productName: { type: "string" },
-                  totalFeedback: { type: "number" },
-                  avgSentiment: { type: "number" },
-                  topComplaintsCount: { type: "number" },
-                  topFeatureRequestCount: { type: "number" },
-                  complaints: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: { name: { type: "string" }, mentions: { type: "number" } },
-                      required: ["name", "mentions"],
-                    },
-                  },
-                  sentiment: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string", enum: ["Positive", "Neutral", "Negative"] },
-                        value: { type: "number" },
+            model: ANALYZE_MODEL,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "analyze_product",
+                  description: "Return structured product analysis data",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      productName: { type: "string" },
+                      totalFeedback: { type: "number" },
+                      avgSentiment: { type: "number" },
+                      topComplaintsCount: { type: "number" },
+                      topFeatureRequestCount: { type: "number" },
+                      complaints: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: { name: { type: "string" }, mentions: { type: "number" } },
+                          required: ["name", "mentions"],
+                        },
                       },
-                      required: ["name", "value"],
-                    },
-                  },
-                  trendData: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: { month: { type: "string" }, requests: { type: "number" } },
-                      required: ["month", "requests"],
-                    },
-                  },
-                  featureRequests: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        mentions: { type: "number" },
-                        trend: { type: "string", enum: ["up", "down", "stable"] },
+                      sentiment: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string", enum: ["Positive", "Neutral", "Negative"] },
+                            value: { type: "number" },
+                          },
+                          required: ["name", "value"],
+                        },
                       },
-                      required: ["name", "mentions", "trend"],
-                    },
-                  },
-                  competitors: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        weakness: { type: "string" },
-                        sentiment: { type: "number" },
+                      trendData: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: { month: { type: "string" }, requests: { type: "number" } },
+                          required: ["month", "requests"],
+                        },
                       },
-                      required: ["name", "weakness", "sentiment"],
-                    },
-                  },
-                  opportunityScore: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        score: { type: "number" },
-                        mentions: { type: "number" },
+                      featureRequests: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string" },
+                            mentions: { type: "number" },
+                            trend: { type: "string", enum: ["up", "down", "stable"] },
+                          },
+                          required: ["name", "mentions", "trend"],
+                        },
                       },
-                      required: ["name", "score", "mentions"],
-                    },
-                  },
-                  clusters: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        count: { type: "number" },
-                        avgSentiment: { type: "string" },
-                        samples: { type: "array", items: { type: "string" } },
+                      competitors: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string" },
+                            weakness: { type: "string" },
+                            sentiment: { type: "number" },
+                          },
+                          required: ["name", "weakness", "sentiment"],
+                        },
                       },
-                      required: ["name", "count", "avgSentiment", "samples"],
+                      opportunityScore: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string" },
+                            score: { type: "number" },
+                            mentions: { type: "number" },
+                          },
+                          required: ["name", "score", "mentions"],
+                        },
+                      },
+                      clusters: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string" },
+                            count: { type: "number" },
+                            avgSentiment: { type: "string" },
+                            samples: { type: "array", items: { type: "string" } },
+                          },
+                          required: ["name", "count", "avgSentiment", "samples"],
+                        },
+                      },
+                      aiRecommendation: { type: "string" },
+                      industryBrief: {
+                        type: "string",
+                        description:
+                          "3-5 sentence synthesis of industry/market signals (prediction markets, GitHub velocity, social engagement). Omit if no market data provided.",
+                      },
+                      sourcesCount: { type: "number" },
                     },
+                    required: [
+                      "productName",
+                      "totalFeedback",
+                      "avgSentiment",
+                      "topComplaintsCount",
+                      "topFeatureRequestCount",
+                      "complaints",
+                      "sentiment",
+                      "trendData",
+                      "featureRequests",
+                      "competitors",
+                      "opportunityScore",
+                      "clusters",
+                      "aiRecommendation",
+                      "sourcesCount",
+                    ],
                   },
-                  aiRecommendation: { type: "string" },
-                  industryBrief: { type: "string", description: "3-5 sentence synthesis of industry/market signals (prediction markets, GitHub velocity, social engagement). Omit if no market data provided." },
-                  sourcesCount: { type: "number" },
                 },
-                required: [
-                  "productName", "totalFeedback", "avgSentiment", "topComplaintsCount",
-                  "topFeatureRequestCount", "complaints", "sentiment", "trendData",
-                  "featureRequests", "competitors", "opportunityScore", "clusters",
-                  "aiRecommendation", "sourcesCount",
-                ],
               },
-            },
+            ],
+            tool_choice: { type: "function", function: { name: "analyze_product" } },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "analyze_product" } },
-      }),
-        });
+          openRouterApiKey,
+        );
         if (!res.ok && res.status >= 500) {
           throw new Error(`AI gateway error: ${res.status}`);
         }
         return res;
       },
-      { maxRetries: 2, baseDelayMs: 1000 }
+      { maxRetries: 2, baseDelayMs: 1000 },
     );
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI usage limit reached. Please add credits." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      const special = aiProviderErrorResponse(response.status, corsHeaders);
+      if (special) return special;
       const text = await response.text();
       logger.error("AI gateway error", { status: response.status, body: text.slice(0, 200) });
       throw new Error(`AI gateway error: ${response.status}`);

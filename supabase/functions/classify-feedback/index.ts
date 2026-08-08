@@ -6,6 +6,11 @@ import { UnauthorizedError, verifyInternalSecret } from "../_shared/auth.ts";
 import { checkRateLimit, getRateLimitKey } from "../_shared/rate-limit.ts";
 import { withRetry } from "../_shared/retry.ts";
 import { initLogger, logger } from "../_shared/logger.ts";
+import {
+  CLASSIFY_MODEL,
+  openRouterChatCompletion,
+  requireOpenRouterApiKey,
+} from "../_shared/ai.ts";
 
 serve(async (req) => {
   initLogger("classify-feedback", req);
@@ -31,8 +36,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const openRouterApiKey = requireOpenRouterApiKey();
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
@@ -92,71 +96,75 @@ serve(async (req) => {
       try {
         const response = await withRetry(
           async () => {
-            const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-            model: "google/gemini-2.5-flash-lite",
-            messages: [
+            const res = await openRouterChatCompletion(
               {
-                role: "system",
-                content: `You are a feedback classifier. For each feedback item, determine:
+                model: CLASSIFY_MODEL,
+                messages: [
+                  {
+                    role: "system",
+                    content: `You are a feedback classifier. For each feedback item, determine:
 1. sentiment: one of "positive", "negative", "neutral", "feature_request", "bug", "pricing", "performance"
 2. cluster: a short descriptive label (2-5 words) grouping similar feedback
 3. quality: 1=low relevance, 2=medium, 3=high relevance to product feedback
 
 Use the classify_feedback tool to return your classifications.`,
-              },
-              {
-                role: "user",
-                content: `Classify these ${batch.length} feedback items:\n\n${batchInput.map((b) => `[${b.idx}] (${b.source}) ${b.text}`).join("\n\n")}`,
-              },
-            ],
-            tools: [
-              {
-                type: "function",
-                function: {
-                  name: "classify_feedback",
-                  description: "Return classifications for feedback items",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      items: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            idx: { type: "number" },
-                            sentiment: {
-                              type: "string",
-                              enum: ["positive", "negative", "neutral", "feature_request", "bug", "pricing", "performance"],
+                  },
+                  {
+                    role: "user",
+                    content: `Classify these ${batch.length} feedback items:\n\n${batchInput.map((b) => `[${b.idx}] (${b.source}) ${b.text}`).join("\n\n")}`,
+                  },
+                ],
+                tools: [
+                  {
+                    type: "function",
+                    function: {
+                      name: "classify_feedback",
+                      description: "Return classifications for feedback items",
+                      parameters: {
+                        type: "object",
+                        properties: {
+                          items: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                idx: { type: "number" },
+                                sentiment: {
+                                  type: "string",
+                                  enum: [
+                                    "positive",
+                                    "negative",
+                                    "neutral",
+                                    "feature_request",
+                                    "bug",
+                                    "pricing",
+                                    "performance",
+                                  ],
+                                },
+                                cluster: { type: "string" },
+                                quality: { type: "number", enum: [1, 2, 3] },
+                              },
+                              required: ["idx", "sentiment", "cluster", "quality"],
+                              additionalProperties: false,
                             },
-                            cluster: { type: "string" },
-                            quality: { type: "number", enum: [1, 2, 3] },
                           },
-                          required: ["idx", "sentiment", "cluster", "quality"],
-                          additionalProperties: false,
                         },
+                        required: ["items"],
+                        additionalProperties: false,
                       },
                     },
-                    required: ["items"],
-                    additionalProperties: false,
                   },
-                },
+                ],
+                tool_choice: { type: "function", function: { name: "classify_feedback" } },
               },
-            ],
-            tool_choice: { type: "function", function: { name: "classify_feedback" } },
-          }),
-            });
+              openRouterApiKey,
+            );
             if (!res.ok && res.status >= 500) {
               throw new Error(`AI classification error: ${res.status}`);
             }
             return res;
           },
-          { maxRetries: 1, baseDelayMs: 1000 }
+          { maxRetries: 1, baseDelayMs: 1000 },
         );
 
         if (!response.ok) {

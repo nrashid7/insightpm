@@ -34,7 +34,7 @@ npm run deploy:db
 npm run deploy:functions
 ```
 
-Set all Edge Function secrets from `.env.example` (Lovable, Firecrawl, `INTERNAL_FUNCTION_SECRET`, etc.).
+Set all Edge Function secrets from `.env.example` (OpenRouter, Firecrawl, `INTERNAL_FUNCTION_SECRET`, etc.).
 
 **Launch hardening migration** (`20260530100001_launch_hardening.sql`) applies:
 - Service-role-only UPDATE policies on `feedback_items` and `monitored_products`

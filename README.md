@@ -19,7 +19,7 @@ Frontend (Vite + React + TypeScript)
 
 **Frontend**: Vite 5, React 18, TypeScript, Tailwind CSS, shadcn/ui (Radix), Framer Motion, Recharts  
 **Backend**: Supabase (Postgres + Row-Level Security, Auth, Deno Edge Functions)  
-**AI**: Lovable AI Gateway (Gemini) for analysis and classification  
+**AI**: OpenRouter (Gemini) for analysis and classification  
 **Scraping**: Firecrawl API for Reddit, Trustpilot, Google Play, and general web
 
 ## Local Development
@@ -64,12 +64,11 @@ Edge Function secrets (set via `supabase secrets set`):
 | `SUPABASE_URL` | Yes | Same as `VITE_SUPABASE_URL` |
 | `SUPABASE_ANON_KEY` | Yes | Same as `VITE_SUPABASE_PUBLISHABLE_KEY` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (keep secret) |
-| `LOVABLE_API_KEY` | Yes | Lovable AI Gateway key |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter API key (Gemini models) |
 | `FIRECRAWL_API_KEY` | Yes | Firecrawl API key for web scraping |
 | `INTERNAL_FUNCTION_SECRET` | Yes | Shared secret for internal function-to-function calls |
 | `YOUTUBE_API_KEY` | No | YouTube Data API v3 key |
 | `SCRAPECREATORS_API_KEY` | No | ScrapeCreators key for TikTok/Instagram/Threads/X in Industry Signals |
-| `OPENROUTER_API_KEY` | No | OpenRouter key for Perplexity Sonar web search |
 | `BRAVE_API_KEY` | No | Brave Search key (2,000 free queries/month) |
 
 ### Database Setup

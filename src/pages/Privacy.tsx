@@ -27,7 +27,7 @@ const Privacy = () => (
         </p>
         <h2 className="text-lg font-semibold text-foreground pt-4">Third-party services</h2>
         <p>
-          We use Supabase (hosting and database), Stripe (billing), Lovable AI Gateway (analysis),
+          We use Supabase (hosting and database), Stripe (billing), OpenRouter (analysis),
           Firecrawl and public APIs (feedback collection), and optional analytics providers.
           Each has its own privacy policy.
         </p>
