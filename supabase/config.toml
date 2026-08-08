@@ -1,10 +1,25 @@
-# BusinessVoice AI — linked Supabase project
-# Dashboard: https://supabase.com/dashboard/project/wtrqpnzacuaroxluxwfa
+project_id = "zoxsygxolbzyhwezgnpg"
 
-project_id = "wtrqpnzacuaroxluxwfa"
+[functions.analyze-product]
+verify_jwt = true
 
-[api]
-enabled = true
+[functions.collect-feedback]
+verify_jwt = false
 
-[db]
-major_version = 17
+[functions.classify-feedback]
+verify_jwt = false
+
+[functions.run-monitoring]
+verify_jwt = false
+
+[functions.collect-market-signals]
+verify_jwt = false
+
+[functions.stripe-checkout]
+verify_jwt = true
+
+[functions.stripe-portal]
+verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false

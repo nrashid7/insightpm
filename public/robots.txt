@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /history
+Disallow: /monitor
+Disallow: /auth
+
+Sitemap: https://insightpm.app/sitemap.xml
