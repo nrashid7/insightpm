@@ -50,6 +50,17 @@ describe("openRouterChatCompletion", () => {
     expect(init.headers["X-Title"]).toBe("InsightPM");
     expect(JSON.parse(init.body).model).toBe(ANALYZE_MODEL);
   });
+
+  it("defaults HTTP-Referer to sigyn-kohl when SITE_URL is unset", async () => {
+    delete denoEnv.SITE_URL;
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await openRouterChatCompletion({ model: CLASSIFY_MODEL, messages: [] });
+
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers["HTTP-Referer"]).toBe("https://sigyn-kohl.vercel.app");
+  });
 });
 
 describe("aiProviderErrorResponse", () => {

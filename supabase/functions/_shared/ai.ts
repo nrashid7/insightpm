@@ -23,7 +23,7 @@ export async function openRouterChatCompletion(
   body: ChatCompletionBody,
   apiKey = requireOpenRouterApiKey(),
 ): Promise<Response> {
-  const siteUrl = Deno.env.get("SITE_URL")?.trim() || "https://insightpm.app";
+  const siteUrl = Deno.env.get("SITE_URL")?.trim() || "https://sigyn-kohl.vercel.app";
 
   return fetch(OPENROUTER_URL, {
     method: "POST",
