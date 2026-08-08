@@ -2,6 +2,7 @@ const ALLOWED_ORIGINS = [
   "https://insightpm.app",
   "https://www.insightpm.app",
   "https://insightpm-app.vercel.app",
+  "https://sigyn-kohl.vercel.app",
   "http://localhost:8080",
   "http://localhost:5173",
 ];
