@@ -32,3 +32,4 @@ pnpm-lock.yaml
 *.njsproj
 *.sln
 *.sw?
+.vercel
