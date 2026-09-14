@@ -13,6 +13,13 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("feedback collector evidence integrity", () => {
+  it("preserves Hacker News points when ranking market signals", async () => {
+    vi.stubGlobal("fetch", async (url: string) => reply({ hits: url.includes('tags=story') ? [{ objectID: '42', title: 'Notion adds offline mode', created_at: recent, points: 120, num_comments: 7 }] : [] }));
+    const result = await collectMarketSignals({ topic: 'Notion', sources: ['hackernews'] });
+    expect(result.signals[0].engagement).toBe(120);
+    expect(result.signals[0].normalizedScore).toBeGreaterThan(0);
+  });
+
   it("reports an upstream 429 as failed without fabricating empty success", async () => {
     vi.stubGlobal("fetch", async () => reply({ message: "quota" }, 429));
     const result = await collectFeedback({ productName: "Notion", sources: ["github"] });

@@ -49,7 +49,8 @@ export async function collectMarketSignals(input: { topic: string; sources?: str
         status = sourceStatus.status; error = sourceStatus.error;
         for (const item of collected.items) {
           if (!item.url) continue;
-          const engagement = number(item.metadata?.score || item.metadata?.likes || item.metadata?.comments);
+          const metric = source === 'hackernews' ? 'points' : source === 'github' ? 'reactions' : source === 'reddit_top' ? 'upvotes' : 'likes';
+          const engagement = number(item.metadata?.[metric]);
           signals.push({ source, title: item.title || item.text.slice(0, 100), text: item.text, url: item.url, timestamp: item.source_timestamp, engagement, normalizedScore: normalizeEngagement(engagement, source), metadata: item.metadata });
         }
       } else throw new SourceUnavailable('unsupported', 'This market source has no supported hosted integration');

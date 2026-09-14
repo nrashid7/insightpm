@@ -29,3 +29,9 @@ The last30days reference informed recent-window collection, provenance, relevanc
 - The full product objective remains open until the remaining external setup and verification gates are resolved.
 
 Billing is intentionally excluded. Do not describe the beta allowance as a paid subscription.
+
+## Follow-up live source verification
+
+Production analyze-product version 11 collected 52 dated Notion items: GitHub 23, Hacker News 6, App Store 23. Stack Overflow returned no matching recent Notion questions. Separate live local React collection returned 21 Stack Overflow questions, 33 Hacker News items, and 29 GitHub issues. Polymarket responded from production with no matching Notion markets. Reddit returned HTTP 403 both locally and in production; capabilities now disable Reddit pending an authorized integration. Fixed market ranking to preserve each provider's actual points/reactions/upvotes/likes, with a regression test. Monitoring version 7 includes the same updated shared engine.
+
+Supabase dashboard access-token page redirected back to sign-in before token creation. The connected management tools support deployment but do not expose access-token creation. GitHub Actions deployment credentials remain unresolved; manual connected deployments work.

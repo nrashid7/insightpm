@@ -17,12 +17,14 @@ serve(async req => {
     billingEnabled: Deno.env.get('BILLING_ENABLED') === 'true',
     analysisMode: configured('OPENROUTER_API_KEY') ? 'ai' : 'evidence', auth,
     feedbackSources: [
-      ...['custom', 'hackernews', 'github', 'stackoverflow', 'appstore', 'reddit'].map(id => capability(id, true)),
+      ...['custom', 'hackernews', 'github', 'stackoverflow', 'appstore'].map(id => capability(id, true)),
+      capability('reddit', false, 'Reddit blocks hosted public collection; an authorized Reddit integration is required'),
       capability('youtube', configured('YOUTUBE_API_KEY')),
       ...['web', 'trustpilot', 'googleplay'].map(id => capability(id, configured('FIRECRAWL_API_KEY'))),
     ],
     marketSources: [
-      ...['polymarket', 'hackernews', 'github', 'reddit_top'].map(id => capability(id, true)),
+      ...['polymarket', 'hackernews', 'github'].map(id => capability(id, true)),
+      capability('reddit_top', false, 'Reddit blocks hosted public collection; an authorized Reddit integration is required'),
       capability('youtube', configured('YOUTUBE_API_KEY')),
       capability('tiktok', configured('SCRAPECREATORS_API_KEY')),
       capability('x', false, 'No supported hosted X integration'),

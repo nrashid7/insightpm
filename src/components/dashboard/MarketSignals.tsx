@@ -39,7 +39,7 @@ const MarketSignalsSection = ({ signals, industryBrief }: MarketSignalsSectionPr
           Industry Signals
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Engagement-scored signals from the last 30 days — scored by upvotes, views, stars, and real money
+          Recent signals ranked by source engagement; prediction markets show trading volume
         </p>
       </motion.div>
 
@@ -174,7 +174,7 @@ const MarketSignalsSection = ({ signals, industryBrief }: MarketSignalsSectionPr
             <TrendingUp className="w-4 h-4 text-primary" />
             Top Signals by Engagement
           </h3>
-          <p className="text-xs text-muted-foreground mb-4">Ranked by community engagement (upvotes, views, stars)</p>
+          <p className="text-xs text-muted-foreground mb-4">Ranked by source engagement, including points, reactions, and likes</p>
           <div className="space-y-2.5">
             {signals.signals.slice(0, 15).map((signal, i) => {
               const srcInfo = SOURCE_LABELS[signal.source] || { label: signal.source, color: "bg-muted text-muted-foreground" };
