@@ -367,7 +367,7 @@ const DashboardContent = () => {
         {error && !isLoading && (
           <div className="text-center py-20">
             <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-foreground mb-2">Analysis Failed</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2">{error.startsWith('No evidence was found') ? 'No matching feedback found' : 'Analysis Failed'}</h2>
             <p className="text-muted-foreground mb-6">{error}</p>
             <Link to="/analyze"><Button variant="hero">Try Again</Button></Link>
           </div>

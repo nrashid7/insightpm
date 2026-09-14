@@ -119,4 +119,11 @@ describe("Dashboard page", () => {
       expect(screen.getByText("Network error")).toBeInTheDocument();
     });
   });
+  it("distinguishes an empty research result from a failed analysis", async () => {
+    const { analyzeProduct } = await import("@/lib/api/analyze");
+    vi.mocked(analyzeProduct).mockRejectedValueOnce(new Error('No evidence was found in the selected research window.'));
+    renderDashboard('?product=Hurvest');
+    await screen.findByText('No matching feedback found');
+    expect(screen.queryByText('Analysis Failed')).not.toBeInTheDocument();
+  });
 });

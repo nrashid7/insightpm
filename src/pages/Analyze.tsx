@@ -148,7 +148,7 @@ const AnalyzeForm = () => {
               Analyze a <span className="text-gradient-primary">Product</span>
             </h1>
             <p className="text-muted-foreground">
-              Enter product details and our AI will gather feedback insights from across the internet.
+              Find recent public feedback about your product, or paste feedback from your own users.
             </p>
           </div>
 
@@ -205,8 +205,9 @@ const AnalyzeForm = () => {
             <div className="space-y-3">
               <Label className="flex items-center gap-2 text-foreground">
                 <Database className="w-4 h-4 text-muted-foreground" />
-                Data Sources
+                Product Feedback Sources
               </Label>
+              <p className="text-xs text-muted-foreground">Public mentions and reviews about this product from the last 30 days. Use Custom / Paste for your own customer feedback.</p>
               <div className="grid grid-cols-2 gap-2">
                 {ALL_SOURCES.map((source) => {
                   const disabled = !available(source.id) || (plan ? !sourceAllowedForPlan(plan, source.id) : false);
@@ -275,13 +276,14 @@ const AnalyzeForm = () => {
                 />
                 <Label className="flex items-center gap-2 text-foreground cursor-pointer">
                   <TrendingUp className="w-4 h-4 text-primary" />
-                  Include Industry Signals
-                  <span className="text-muted-foreground text-xs">(Polymarket, engagement scores, GitHub velocity)</span>
+                  Include Market Signals
+                  <span className="text-muted-foreground text-xs">(public discussions and prediction markets)</span>
                 </Label>
               </label>
 
               {includeMarketSignals && (
                 <div className="ml-6 space-y-2">
+                  <p className="text-xs text-muted-foreground">Searches the same product name for external signals, ranked by engagement. Sources selected above may overlap; this is not a separate search of your wider industry.</p>
                   <div className="grid grid-cols-2 gap-2">
                     {MARKET_SIGNAL_SOURCES.map((source) => (
                       <label
