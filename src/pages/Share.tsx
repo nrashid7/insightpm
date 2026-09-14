@@ -16,6 +16,9 @@ const Share = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    setProductName("");
     if (!analysisId) {
       setError("Invalid share link");
       setIsLoading(false);
@@ -32,6 +35,7 @@ const Share = () => {
         .eq("is_public", true)
         .single();
 
+      if (cancelled) return;
       if (err || !row) {
         setError("This analysis is not available. It may be private or removed.");
       } else {
@@ -42,6 +46,7 @@ const Share = () => {
     };
 
     load();
+    return () => { cancelled = true; };
   }, [analysisId]);
 
   return (
@@ -79,7 +84,7 @@ const Share = () => {
           </div>
         )}
 
-        {data && !isLoading && (
+        {data && !isLoading && !error && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <AnalysisResultsView data={data} readOnly />
           </motion.div>
