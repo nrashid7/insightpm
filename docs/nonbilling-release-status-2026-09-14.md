@@ -41,3 +41,6 @@ The user-provided management token was validated against the InsightPM project a
 
 Management API inspection found that Site URL and redirect allowlist still referenced the unrelated Sigyn deployment. Both were updated and read back successfully for https://insightpm-pi.vercel.app and its auth/analyze routes. Signup remains enabled with email confirmation. Custom SMTP is absent, so public signup and recovery delivery remain a release blocker pending an email provider and verified sender domain.
 
+## User-deferred setup
+
+The user explicitly deferred custom SMTP and email-delivery verification, and will configure Google/GitHub authentication personally. Continue nonbilling product work without treating these as current implementation blockers. Keep signup confirmation and password-reset delivery on the pre-public-launch checklist; do not disable email confirmation as a workaround. Existing Supabase email/password login remains in use.
