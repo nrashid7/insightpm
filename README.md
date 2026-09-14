@@ -17,7 +17,7 @@ Frontend (Vite + React + TypeScript)
             └─ run-monitoring          — scheduled (pg_cron) re-analysis with change detection and alerts
 ```
 
-**Frontend**: Vite 5, React 18, TypeScript, Tailwind CSS, shadcn/ui (Radix), Framer Motion, Recharts  
+**Frontend**: Vite 8, React 18, TypeScript, Tailwind CSS, shadcn/ui (Radix), Framer Motion, Recharts
 **Backend**: Supabase (Postgres + Row-Level Security, Auth, Deno Edge Functions)  
 **AI**: OpenRouter (Gemini) for analysis and classification  
 **Scraping**: Firecrawl API for Reddit, Trustpilot, Google Play, and general web
@@ -26,7 +26,7 @@ Frontend (Vite + React + TypeScript)
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24 (matches Vercel and CI)
 - npm
 - A [Supabase](https://supabase.com) project
 
@@ -108,6 +108,10 @@ ALTER DATABASE postgres SET app.settings.service_role_key = '<your-service-role-
 ## Deployment
 
 The app is a static SPA deployed to Vercel. A [`vercel.json`](vercel.json) is included with SPA routing rewrites, security headers, and asset caching.
+
+Production: https://insightpm-pi.vercel.app — Vercel project `insightpm`, connected to `nrashid7/insightpm` (`main`). The Supabase project is `zoxsygxolbzyhwezgnpg`.
+
+Before deploying from a local checkout, run `vercel link --project insightpm --scope nrashid7s-projects --yes`. Older checkouts may still link to the separate `sigyn` project. Configure nonempty `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_SUPABASE_PROJECT_ID` for Production and Preview, then redeploy with `vercel --prod`. Vite embeds these values at build time; changing environment settings alone does not update an existing deployment. Builds now reject missing Supabase URL or public key.
 
 Edge Functions are deployed via the Supabase CLI:
 

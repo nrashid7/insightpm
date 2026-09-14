@@ -242,3 +242,10 @@ CREATE TRIGGER enforce_monitor_limit
   BEFORE INSERT ON public.monitored_products
   FOR EACH ROW
   EXECUTE FUNCTION private.check_monitor_limit();
+
+-- Match the deployed signup-trigger permissions.
+ALTER FUNCTION public.handle_new_user() SET search_path = '';
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM anon;
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
