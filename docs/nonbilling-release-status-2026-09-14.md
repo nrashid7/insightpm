@@ -23,7 +23,7 @@ The last30days reference informed recent-window collection, provenance, relevanc
 
 ## Remaining release gates
 
-- GitHub Actions has no repository secrets. Automatic Supabase deployment fails at project linking. Configure a valid SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF, then rerun deployment and verify it. Manual MCP deployment has succeeded; this does not prove the automated path.
+- Automatic Supabase deployment is verified: GitHub Actions run 34892207531 succeeded for commit 18a2ef957ca2710c7c5ff4b79c4ebf5a1f4fe334 after configuring repository secrets. Linking, migration push, all six nonbilling functions, and post-deployment access checks passed.
 - Public signup confirmation-email delivery and email recovery delivery are unverified. The audit account was an explicitly authorized administrative fixture; its successful password login does not establish mail delivery. Recovery UI regressions are tested.
 - Optional provider credentials cannot be fabricated. Live paid-provider results and AI output require their configuration and follow-up verification.
 - The full product objective remains open until the remaining external setup and verification gates are resolved.
@@ -34,4 +34,10 @@ Billing is intentionally excluded. Do not describe the beta allowance as a paid 
 
 Production analyze-product version 11 collected 52 dated Notion items: GitHub 23, Hacker News 6, App Store 23. Stack Overflow returned no matching recent Notion questions. Separate live local React collection returned 21 Stack Overflow questions, 33 Hacker News items, and 29 GitHub issues. Polymarket responded from production with no matching Notion markets. Reddit returned HTTP 403 both locally and in production; capabilities now disable Reddit pending an authorized integration. Fixed market ranking to preserve each provider's actual points/reactions/upvotes/likes, with a regression test. Monitoring version 7 includes the same updated shared engine.
 
-Supabase dashboard access-token page redirected back to sign-in before token creation. The connected management tools support deployment but do not expose access-token creation. GitHub Actions deployment credentials remain unresolved; manual connected deployments work.
+The user-provided management token was validated against the InsightPM project and saved in encrypted GitHub Actions secrets. Its expiration has not been verified. The prior credential blocker is resolved.
+
+
+## Auth configuration follow-up
+
+Management API inspection found that Site URL and redirect allowlist still referenced the unrelated Sigyn deployment. Both were updated and read back successfully for https://insightpm-pi.vercel.app and its auth/analyze routes. Signup remains enabled with email confirmation. Custom SMTP is absent, so public signup and recovery delivery remain a release blocker pending an email provider and verified sender domain.
+
