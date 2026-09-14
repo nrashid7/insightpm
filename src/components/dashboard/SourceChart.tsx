@@ -42,6 +42,12 @@ const SourceChart = ({ sourceBreakdown }: SourceChartProps) => {
           <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={18} />
         </BarChart>
       </ResponsiveContainer>
+      <ul className="mt-3 space-y-2 text-xs text-muted-foreground" aria-label="Source collection status">
+        {sourceBreakdown.map(source => <li key={source.source}>
+          <span className="font-medium">{SOURCE_LABELS[source.source]?.label || source.source}</span>: {source.status || 'Collected'} · {source.count} items
+          {source.error && <span className="block text-destructive">{source.error}</span>}
+        </li>)}
+      </ul>
     </motion.div>
   );
 };
