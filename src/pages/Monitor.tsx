@@ -54,6 +54,9 @@ interface MonitoredProduct {
   next_run_at: string | null;
   is_active: boolean;
   created_at: string;
+  run_status?: string;
+  last_error?: string | null;
+  last_analysis_id?: string | null;
 }
 
 interface LatestAnalysisMap {
@@ -386,10 +389,12 @@ const Monitor = () => {
                               <> · Next: {new Date(product.next_run_at).toLocaleDateString()}</>
                             )}
                           </div>
+                          {product.run_status && <p className="text-xs text-muted-foreground mt-1">Latest run: {product.run_status}</p>}
+                          {product.last_error && <p role="status" className="text-xs text-destructive mt-1">{product.last_error}</p>}
                         </div>
                         <div className="flex items-center gap-1">
-                          {latestAnalyses[product.product_name] && (
-                            <Link to={`/dashboard?analysisId=${latestAnalyses[product.product_name]}`}>
+                          {(product.last_analysis_id || latestAnalyses[product.product_name]) && (
+                            <Link to={`/dashboard?analysisId=${product.last_analysis_id || latestAnalyses[product.product_name]}`}>
                               <Button variant="ghost" size="icon" className="h-8 w-8" title="View latest analysis">
                                 <ExternalLink className="w-4 h-4" />
                               </Button>
