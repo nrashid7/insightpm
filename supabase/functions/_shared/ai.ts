@@ -23,7 +23,7 @@ export async function openRouterChatCompletion(
   body: ChatCompletionBody,
   apiKey = requireOpenRouterApiKey(),
 ): Promise<Response> {
-  const siteUrl = Deno.env.get("SITE_URL")?.trim() || "https://sigyn-kohl.vercel.app";
+  const siteUrl = Deno.env.get("SITE_URL")?.trim() || "https://insightpm-pi.vercel.app";
 
   return fetch(OPENROUTER_URL, {
     method: "POST",
@@ -34,6 +34,7 @@ export async function openRouterChatCompletion(
       "X-Title": "InsightPM",
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(25_000),
   });
 }
 

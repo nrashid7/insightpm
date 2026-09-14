@@ -1,16 +1,6 @@
--- Restrict backend-only operations and isolate privileged trigger code.
-
--- Subscription entitlements are Stripe-controlled and must never be user-writable.
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 REVOKE INSERT, UPDATE ON public.profiles FROM authenticated;
-
--- The auth.users trigger needs this function, but API roles must not invoke it.
-ALTER FUNCTION public.handle_new_user() SET search_path = '';
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM anon;
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.handle_new_user() TO service_role;
 
 DROP POLICY IF EXISTS "Service can insert analysis sources" ON public.analysis_sources;
 CREATE POLICY "Service role can insert analysis sources"
@@ -58,7 +48,6 @@ DECLARE
   max_monitors int;
   current_count int;
 BEGIN
-  -- Serialize inserts for one user so concurrent requests cannot exceed the cap.
   PERFORM pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended(NEW.user_id::text, 0)
   );

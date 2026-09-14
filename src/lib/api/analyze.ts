@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { AnalysisInput, AnalysisResult } from "@/lib/types/analysis";
+import { functionErrorMessage } from "./function-error";
 
 let lastCallTimestamp = 0;
 const MIN_INTERVAL_MS = 5_000;
@@ -14,6 +15,7 @@ export async function analyzeProduct(input: AnalysisInput): Promise<AnalysisResu
   const { data, error } = await supabase.functions.invoke("analyze-product", {
     body: {
       productName: input.productName,
+      days: input.days,
       website: input.website,
       competitors: input.competitors,
       sources: input.sources,
@@ -25,11 +27,7 @@ export async function analyzeProduct(input: AnalysisInput): Promise<AnalysisResu
   });
 
   if (error) {
-    const status = (error as any)?.status;
-    if (status === 429) {
-      throw new Error("Rate limit exceeded. Please wait before trying again.");
-    }
-    throw new Error(error.message || "Failed to analyze product");
+    throw new Error(await functionErrorMessage(error, "Failed to analyze product"));
   }
 
   if (!data || data.error) {

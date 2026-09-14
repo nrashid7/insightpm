@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migration = readFileSync(
-  resolve("supabase/migrations/20260808131046_tighten_service_policies.sql"),
+  resolve("supabase/migrations/20260808135832_tighten_service_policies.sql"),
   "utf8",
 );
 const schemaSnapshot = readFileSync(resolve("migration/schema.sql"), "utf8");

@@ -3,6 +3,9 @@ import { act, render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom";
 
 const mockNavigate = vi.fn();
+const config = vi.hoisted(() => ({ billing: true, google: true, github: true }));
+vi.mock("@/lib/product-config", () => ({ get BILLING_ENABLED() { return config.billing; } }));
+vi.mock("@/hooks/useCapabilities", () => ({ useCapabilities: () => ({ capabilities: { auth: { google: config.google, github: config.github } } }) }));
 let mockSearchParams = new URLSearchParams();
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -82,7 +85,23 @@ function renderAuth() {
 }
 
 describe("Auth page", () => {
+  it("hides disabled OAuth providers", () => {
+    config.google = false; config.github = false;
+    renderAuth();
+    expect(screen.queryByText('Google')).not.toBeInTheDocument();
+    expect(screen.queryByText('GitHub')).not.toBeInTheDocument();
+  });
+
+  it("ignores checkout parameters during the non-billing beta", async () => {
+    config.billing = false;
+    mockSearchParams = new URLSearchParams('plan=growth');
+    renderAuth();
+    await act(async () => { authChangeCallback('SIGNED_IN', { user: { id: 'beta-user' } }); });
+    expect(createCheckoutSession).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/analyze');
+  });
   beforeEach(() => {
+    config.billing = true; config.google = true; config.github = true;
     vi.clearAllMocks();
     mockSearchParams = new URLSearchParams();
     (supabase.auth.getSession as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -182,6 +201,15 @@ describe("Auth page", () => {
       expect(screen.getByText("Set new password")).toBeInTheDocument();
     });
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("completes recovery without requiring an email and leaves recovery mode", async () => {
+    renderAuth();
+    await act(async () => authChangeCallback("PASSWORD_RECOVERY", { user: { id: "user-1" } }));
+    expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/new password/i), { target: { value: "NewPassword123" } });
+    fireEvent.submit(screen.getByLabelText(/new password/i).closest("form")!);
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/analyze"));
   });
 
   it("waits for the recovery event when an initial recovery session arrives first", async () => {

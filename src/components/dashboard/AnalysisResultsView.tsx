@@ -30,6 +30,11 @@ const AnalysisResultsView = ({ data }: AnalysisResultsViewProps) => (
       </p>
     </motion.div>
 
+    {data.warnings?.length ? <aside className="mb-6 rounded-xl border border-border p-4 text-sm text-muted-foreground" aria-label="Evidence limitations">
+      <p className="font-semibold text-foreground">Evidence and coverage</p>
+      {data.researchWindow && <p>Research window: {data.researchWindow.days} days. Undated submissions are identified separately.</p>}
+      <ul className="list-disc pl-5">{data.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
+    </aside> : null}
     <StatCards data={data} />
     <SourceChart sourceBreakdown={data.sourceBreakdown || []} />
     <ChartsGrid data={data} />
@@ -48,7 +53,7 @@ const AnalysisResultsView = ({ data }: AnalysisResultsViewProps) => (
           <Zap className="w-4 h-4 text-primary" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-foreground mb-1">AI Recommendation</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-1">Suggested next step</h3>
           <p className="text-sm text-muted-foreground leading-relaxed">{data.aiRecommendation}</p>
         </div>
       </div>
@@ -56,6 +61,14 @@ const AnalysisResultsView = ({ data }: AnalysisResultsViewProps) => (
 
     <FeatureRequestsSection featureRequests={data.featureRequests} />
     <FeedbackSamplesSection samples={data.feedbackSamples || []} />
+    {data.evidence?.length ? <details className="mt-6 rounded-xl border border-border p-4">
+      <summary className="cursor-pointer font-semibold">All supporting evidence ({data.evidence.length})</summary>
+      <ol className="space-y-4 mt-4">{data.evidence.map(item => <li key={item.id} id={item.id} className="text-sm">
+        <p className="text-muted-foreground">{item.id} · {item.source} · {item.timestamp ? new Date(item.timestamp).toLocaleDateString() : 'Date unknown'}</p>
+        <p className="whitespace-pre-wrap">{item.text}</p>
+        {item.url && /^https?:\/\//i.test(item.url) && <a className="text-primary underline" href={item.url} target="_blank" rel="noopener noreferrer">View source</a>}
+      </li>)}</ol>
+    </details> : null}
   </>
 );
 

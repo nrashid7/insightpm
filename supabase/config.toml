@@ -1,5 +1,8 @@
 project_id = "zoxsygxolbzyhwezgnpg"
 
+[functions.product-capabilities]
+verify_jwt = true
+
 [functions.analyze-product]
 verify_jwt = true
 

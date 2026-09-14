@@ -1,6 +1,7 @@
 export interface ComplaintData {
   name: string;
   mentions: number;
+  evidenceIds?: string[];
 }
 
 export interface SentimentData {
@@ -18,12 +19,15 @@ export interface FeatureRequest {
   name: string;
   mentions: number;
   trend: "up" | "down" | "stable";
+  evidenceIds?: string[];
 }
 
 export interface CompetitorIntel {
   name: string;
   weakness: string;
   sentiment: number;
+  ratingCount?: number;
+  evidence?: { id: string; source: string; text: string; url?: string; timestamp?: string }[];
 }
 
 export interface OpportunityScore {
@@ -35,6 +39,9 @@ export interface OpportunityScore {
 export interface SourceBreakdown {
   source: string;
   count: number;
+  status?: string;
+  error?: string;
+  duration_ms?: number;
 }
 
 export interface FeedbackSample {
@@ -47,6 +54,12 @@ export interface FeedbackSample {
 }
 
 export interface AnalysisResult {
+  analysisMode?: "evidence" | "ai";
+  evidence?: { id: string; source: string; text: string; title?: string; url?: string; timestamp?: string }[];
+  warnings?: string[];
+  researchWindow?: { days: number; from: string; to: string };
+  ratingCount?: number;
+  runType?: "manual" | "monitoring";
   productName: string;
   totalFeedback: number;
   avgSentiment: number;
@@ -127,6 +140,7 @@ export interface MarketSignals {
 // ─── Input types ─────────────────────────────────────────────────
 
 export interface AnalysisInput {
+  days?: number;
   productName: string;
   website?: string;
   competitors?: string;

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
+import { BILLING_ENABLED } from "@/lib/product-config";
 
 interface RequireSubscriptionProps {
   children: React.ReactNode;
@@ -21,13 +22,13 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 pt-16">
         <div className="max-w-md text-center space-y-4">
-          <h1 className="text-2xl font-bold text-foreground">Subscription required</h1>
+          <h1 className="text-2xl font-bold text-foreground">{BILLING_ENABLED ? 'Subscription required' : 'Could not verify access'}</h1>
           <p className="text-muted-foreground">
-            Choose a plan to run product analyses, save history, and use monitoring.
+            {BILLING_ENABLED ? 'Choose a plan to run product analyses, save history, and use monitoring.' : 'Reload the page to retry your account check.'}
           </p>
-          <Link to="/#pricing">
+          {BILLING_ENABLED && <Link to="/#pricing">
             <Button variant="hero" size="lg">View plans</Button>
-          </Link>
+          </Link>}
         </div>
       </div>
     );
@@ -41,9 +42,9 @@ export function RequireSubscription({ children }: RequireSubscriptionProps) {
           <p className="text-muted-foreground">
             You have used {analysesUsed} of {limits.analysesPerMonth} analyses on your {limits.label} plan.
           </p>
-          <Link to="/#pricing">
+          {BILLING_ENABLED ? <Link to="/#pricing">
             <Button variant="hero" size="lg">Upgrade plan</Button>
-          </Link>
+          </Link> : <p className="text-muted-foreground">Your allowance resets at the start of the next calendar month (UTC).</p>}
         </div>
       </div>
     );

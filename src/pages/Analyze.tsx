@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowRight, Globe, Users, Package, Database, FileText, TrendingUp } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import { useToast } from "@/hooks/use-toast";
+import { useCapabilities } from "@/hooks/useCapabilities";
 
 const ALL_SOURCES = [
   { id: "hackernews", label: "Hacker News", icon: "🟠" },
@@ -38,6 +39,8 @@ const MARKET_SIGNAL_SOURCES = [
 ];
 
 const AnalyzeForm = () => {
+  const { capabilities, loading: capabilitiesLoading, error: capabilitiesError } = useCapabilities();
+  const available = (id: string, market = false) => (market ? capabilities.marketSources : capabilities.feedbackSources).some(s => s.id === id && s.available);
   const { plan, refresh, limits } = useSubscription();
   const [searchParams] = useSearchParams();
   const [productName, setProductName] = useState("");
@@ -52,6 +55,12 @@ const AnalyzeForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (capabilitiesLoading) return;
+    setSelectedSources(prev => prev.filter(id => capabilities.feedbackSources.some(s => s.id === id && s.available)));
+    setSelectedMarketSources(prev => prev.filter(id => capabilities.marketSources.some(s => s.id === id && s.available)));
+  }, [capabilities, capabilitiesLoading]);
 
   useEffect(() => {
     if (searchParams.get("checkout") === "success") {
@@ -71,6 +80,7 @@ const AnalyzeForm = () => {
   }, [plan, limits]);
 
   const toggleSource = (sourceId: string) => {
+    if (!available(sourceId)) return;
     if (plan && !sourceAllowedForPlan(plan, sourceId)) {
       toast({
         title: "Source not on your plan",
@@ -85,6 +95,7 @@ const AnalyzeForm = () => {
   };
 
   const toggleMarketSource = (sourceId: string) => {
+    if (!available(sourceId, true)) return;
     setSelectedMarketSources((prev) =>
       prev.includes(sourceId) ? prev.filter((s) => s !== sourceId) : [...prev, sourceId]
     );
@@ -113,26 +124,12 @@ const AnalyzeForm = () => {
 
     setIsLoading(true);
 
-    const params = new URLSearchParams({ product: productName.trim() });
-    if (website.trim()) params.set("website", website.trim());
-    if (competitors.trim()) params.set("competitors", competitors.trim());
-    const sourcesWithoutCustom = selectedSources.filter((s) => s !== "custom");
-    if (sourcesWithoutCustom.length < ALL_SOURCES.length - 1) {
-      params.set("sources", sourcesWithoutCustom.join(","));
-    }
-    if (selectedSources.includes("custom") && customFeedback.trim()) {
-      params.set("customFeedback", customFeedback.trim());
-    }
-    if (includeMarketSignals) {
-      params.set("marketSignals", "true");
-      if (selectedMarketSources.length < MARKET_SIGNAL_SOURCES.length) {
-        params.set("marketSources", selectedMarketSources.join(","));
-      }
-    } else {
-      params.set("marketSignals", "false");
-    }
-
-    navigate(`/dashboard?${params.toString()}`);
+    navigate('/dashboard', { state: { analysisInput: {
+      productName: productName.trim(), website: website.trim() || undefined,
+      competitors: competitors.trim() || undefined, sources: selectedSources,
+      customFeedback: selectedSources.includes('custom') ? customFeedback.trim() || undefined : undefined,
+      includeMarketSignals, marketSignalSources: selectedMarketSources, days: 30,
+    } } });
   };
 
   return (
@@ -156,6 +153,7 @@ const AnalyzeForm = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {capabilitiesError && <p role="status" className="text-sm text-muted-foreground">{capabilitiesError}</p>}
             {/* Product Name */}
             <div className="space-y-2">
               <Label htmlFor="productName" className="flex items-center gap-2 text-foreground">
@@ -211,7 +209,7 @@ const AnalyzeForm = () => {
               </Label>
               <div className="grid grid-cols-2 gap-2">
                 {ALL_SOURCES.map((source) => {
-                  const disabled = plan ? !sourceAllowedForPlan(plan, source.id) : false;
+                  const disabled = !available(source.id) || (plan ? !sourceAllowedForPlan(plan, source.id) : false);
                   return (
                   <label
                     key={source.id}
@@ -219,17 +217,19 @@ const AnalyzeForm = () => {
                   >
                     <Checkbox
                       checked={selectedSources.includes(source.id)}
+                      disabled={disabled}
                       onCheckedChange={() => toggleSource(source.id)}
                     />
                     <span className="text-sm">{source.icon}</span>
                     <span className="text-sm text-foreground">{source.label}</span>
+                    {!available(source.id) && <span className="text-xs">Unavailable</span>}
                   </label>
                 );})}
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedSources(ALL_SOURCES.map((s) => s.id))}
+                  onClick={() => setSelectedSources(ALL_SOURCES.filter(s => available(s.id) && (!plan || sourceAllowedForPlan(plan, s.id))).map((s) => s.id))}
                   className="text-xs text-primary hover:underline"
                 >
                   Select all
@@ -248,7 +248,7 @@ const AnalyzeForm = () => {
                 <div className="space-y-2 mt-2">
                   <Label htmlFor="customFeedback" className="flex items-center gap-2 text-foreground">
                     <FileText className="w-4 h-4 text-muted-foreground" />
-                    Paste feedback <span className="text-muted-foreground text-xs">(one per line, or CSV)</span>
+                    Paste feedback <span className="text-muted-foreground text-xs">(one item per line)</span>
                   </Label>
                   <Textarea
                     id="customFeedback"
@@ -290,15 +290,17 @@ const AnalyzeForm = () => {
                       >
                         <Checkbox
                           checked={selectedMarketSources.includes(source.id)}
+                          disabled={!available(source.id, true)}
                           onCheckedChange={() => toggleMarketSource(source.id)}
                         />
                         <span className="text-sm">{source.icon}</span>
                         <span className="text-xs text-foreground">{source.label}</span>
+                        {!available(source.id, true) && <span className="text-xs">Unavailable</span>}
                       </label>
                     ))}
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    TikTok and X require a ScrapeCreators API key. Others work free.
+                    Availability reflects configured providers. Collection can still be limited by provider quotas or missing relevant results.
                   </p>
                 </div>
               )}
@@ -309,7 +311,7 @@ const AnalyzeForm = () => {
               variant="hero"
               size="lg"
               className="w-full h-12 text-base"
-              disabled={isLoading}
+              disabled={isLoading || capabilitiesLoading}
             >
               {isLoading ? "Starting Analysis..." : "Analyze Product"}
               <ArrowRight className="w-4 h-4 ml-1" />

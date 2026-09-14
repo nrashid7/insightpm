@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { BILLING_ENABLED, BETA_LIMITS } from "@/lib/product-config";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
@@ -53,6 +54,9 @@ interface MonitoredProduct {
   next_run_at: string | null;
   is_active: boolean;
   created_at: string;
+  run_status?: string;
+  last_error?: string | null;
+  last_analysis_id?: string | null;
 }
 
 interface LatestAnalysisMap {
@@ -78,24 +82,30 @@ const Monitor = () => {
   const [newProduct, setNewProduct] = useState({ name: "", website: "", competitors: "", frequency: "daily" });
   const [deleteTarget, setDeleteTarget] = useState<MonitoredProduct | null>(null);
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const { plan, isActive } = useSubscription();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       navigate("/auth");
       return;
     }
     loadData();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     setIsLoading(true);
-    const [{ data: prods }, { data: alrts }] = await Promise.all([
+    const [{ data: prods, error: productsError }, { data: alrts, error: alertsError }] = await Promise.all([
       supabase.from("monitored_products").select("*").order("created_at", { ascending: false }),
       supabase.from("monitoring_alerts").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
+    if (productsError || alertsError) {
+      toast({ title: "Could not load monitoring", description: productsError?.message || alertsError?.message, variant: "destructive" });
+      setIsLoading(false);
+      return;
+    }
     const productList = (prods as MonitoredProduct[]) || [];
     setProducts(productList);
     setAlerts((alrts as MonitoringAlert[]) || []);
@@ -125,7 +135,7 @@ const Monitor = () => {
   const handleAddProduct = async () => {
     if (!newProduct.name.trim() || !user) return;
 
-    if (!isActive || !plan) {
+    if (BILLING_ENABLED && (!isActive || !plan)) {
       toast({
         title: "Subscription required",
         description: "Monitoring requires a Growth or Enterprise plan.",
@@ -134,7 +144,7 @@ const Monitor = () => {
       return;
     }
 
-    const maxMonitors = PLAN_LIMITS[plan].maxMonitoredProducts;
+    const maxMonitors = BILLING_ENABLED && plan ? PLAN_LIMITS[plan].maxMonitoredProducts : BETA_LIMITS.maxMonitoredProducts;
     if (maxMonitors === 0) {
       toast({
         title: "Upgrade required",
@@ -183,7 +193,7 @@ const Monitor = () => {
     const { error } = await supabase.from("monitored_products").update({ is_active: !isActive }).eq("id", id);
     if (!error) {
       setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, is_active: !isActive } : p)));
-    }
+    } else toast({ title: "Could not update monitor", description: error.message, variant: "destructive" });
   };
 
   const confirmDeleteProduct = async () => {
@@ -198,11 +208,12 @@ const Monitor = () => {
     if (!error) {
       setProducts((prev) => prev.filter((p) => p.id !== id));
       toast({ title: "Product removed from monitoring" });
-    }
+    } else toast({ title: "Could not remove monitor", description: error.message, variant: "destructive" });
   };
 
   const markAlertRead = async (id: string) => {
-    await supabase.from("monitoring_alerts").update({ is_read: true }).eq("id", id);
+    const { error } = await supabase.from("monitoring_alerts").update({ is_read: true }).eq("id", id);
+    if (error) { toast({ title: "Could not mark alert read", description: error.message, variant: "destructive" }); return; }
     setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, is_read: true } : a)));
   };
 
@@ -378,10 +389,12 @@ const Monitor = () => {
                               <> · Next: {new Date(product.next_run_at).toLocaleDateString()}</>
                             )}
                           </div>
+                          {product.run_status && <p className="text-xs text-muted-foreground mt-1">Latest run: {product.run_status}</p>}
+                          {product.last_error && <p role="status" className="text-xs text-destructive mt-1">{product.last_error}</p>}
                         </div>
                         <div className="flex items-center gap-1">
-                          {latestAnalyses[product.product_name] && (
-                            <Link to={`/dashboard?analysisId=${latestAnalyses[product.product_name]}`}>
+                          {(product.last_analysis_id || latestAnalyses[product.product_name]) && (
+                            <Link to={`/dashboard?analysisId=${product.last_analysis_id || latestAnalyses[product.product_name]}`}>
                               <Button variant="ghost" size="icon" className="h-8 w-8" title="View latest analysis">
                                 <ExternalLink className="w-4 h-4" />
                               </Button>

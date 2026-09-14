@@ -8,6 +8,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { createCheckoutSession } from "@/lib/api/billing";
 import { useToast } from "@/hooks/use-toast";
 import type { PlanId } from "@/lib/plans";
+import { BILLING_ENABLED } from "@/lib/product-config";
 
 const plans: { id: PlanId; name: string; price: string; desc: string; features: string[]; highlight: boolean; enterpriseContact?: boolean }[] = [
   {
@@ -62,6 +63,12 @@ const PricingSection = () => {
       setLoadingPlan(null);
     }
   };
+
+  if (!BILLING_ENABLED) return <section id="pricing" className="py-24 container mx-auto px-6 text-center">
+    <h2 className="text-3xl font-bold mb-4">Try InsightPM beta</h2>
+    <p className="text-muted-foreground mb-6">Five completed analyses per month and up to five monitored products. No payment required during beta.</p>
+    <Link to={user ? '/analyze' : '/auth'}><Button variant="hero" size="lg">Start analyzing</Button></Link>
+  </section>;
 
   return (
     <section id="pricing" className="py-32 relative overflow-hidden">

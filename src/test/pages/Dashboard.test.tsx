@@ -18,10 +18,11 @@ vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({ user: mockUser, signOut: vi.fn(), session: { user: mockUser }, loading: false }),
 }));
 
+let subscriptionReady = true;
 vi.mock("@/hooks/useSubscription", () => ({
   useSubscription: () => ({
-    isActive: true,
-    loading: false,
+    isActive: subscriptionReady,
+    loading: !subscriptionReady,
     plan: "growth",
     analysesRemaining: 5,
     analysesUsed: 0,
@@ -73,12 +74,25 @@ function renderDashboard(search = "") {
 describe("Dashboard page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    subscriptionReady = true;
   });
 
   it("shows empty state when no product specified", () => {
     renderDashboard();
     expect(screen.getByText("No Analysis Yet")).toBeInTheDocument();
     expect(screen.getByText("Analyze a Product")).toBeInTheDocument();
+  });
+
+  it("waits for access to load and starts the requested analysis exactly once", async () => {
+    const { analyzeProduct } = await import("@/lib/api/analyze");
+    vi.mocked(analyzeProduct).mockImplementation(() => new Promise(() => {}));
+    subscriptionReady = false;
+    const view = renderDashboard("?product=TestProduct");
+    expect(analyzeProduct).not.toHaveBeenCalled();
+    expect(screen.queryByText("Analysis Failed")).not.toBeInTheDocument();
+    subscriptionReady = true;
+    view.rerender(<MemoryRouter initialEntries={["/dashboard?product=TestProduct"]}><Dashboard /></MemoryRouter>);
+    await waitFor(() => expect(analyzeProduct).toHaveBeenCalledTimes(1));
   });
 
   it("shows loading state during analysis", async () => {
