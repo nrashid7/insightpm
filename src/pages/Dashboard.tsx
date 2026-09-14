@@ -11,6 +11,7 @@ import {
 import { Link, useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { analyzeProduct } from "@/lib/api/analyze";
 import { trackEvent } from "@/lib/analytics";
+import { encodeCSV } from "@/lib/csv";
 import type { AnalysisInput, AnalysisResult } from "@/lib/types/analysis";
 import { BILLING_ENABLED } from "@/lib/product-config";
 import { useToast } from "@/hooks/use-toast";
@@ -217,16 +218,17 @@ const DashboardContent = () => {
       ["Section", "Name", "Value"],
       ...data.complaints.map((c) => ["Complaint", c.name, c.mentions.toString()]),
       ...data.featureRequests.map((f) => ["Feature Request", f.name, f.mentions.toString()]),
-      ...data.sentiment.map((s) => ["Sentiment", s.name, `${s.value}%`]),
+      ...data.sentiment.map((s) => ["Sentiment", s.name, `${s.value} items`]),
       ...data.competitors.map((c) => ["Competitor", c.name, `${c.sentiment}/5 - ${c.weakness}`]),
       ...(data.opportunityScore || []).map((o) => ["Opportunity", o.name, `Score: ${o.score}, Mentions: ${o.mentions}`]),
       ...(data.marketSignals?.predictionMarkets || []).map((m) => ["Prediction Market", m.question, `${m.probability}% Yes ($${Math.round(m.volume).toLocaleString()} volume)`]),
       ...(data.marketSignals?.githubVelocity || []).map((g) => ["GitHub Velocity", g.repo, `${g.stars.toLocaleString()} stars, ${g.recentPRs} PRs merged${g.latestRelease ? `, latest: ${g.latestRelease}` : ""}`]),
       ...(data.marketSignals?.signals || []).slice(0, 15).map((s) => ["Market Signal", `[${s.source}] ${s.title}`, `Score: ${s.normalizedScore}/100, Engagement: ${s.engagement}`]),
       ["Recommendation", data.aiRecommendation, ""],
+      ...(data.evidence || []).map(e => ["Evidence", e.id, JSON.stringify({ source: e.source, text: e.text, url: e.url, timestamp: e.timestamp })]),
       ...(data.marketSignals?.industryBrief ? [["Industry Brief", data.marketSignals.industryBrief, ""]] : []),
     ];
-    const csv = rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = encodeCSV(rows);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

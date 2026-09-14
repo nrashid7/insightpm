@@ -20,7 +20,7 @@ const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 const MarketSignalsSection = ({ signals, industryBrief }: MarketSignalsSectionProps) => {
-  if (!signals || (signals.signals.length === 0 && signals.predictionMarkets.length === 0 && signals.githubVelocity.length === 0)) {
+  if (!signals) {
     return null;
   }
 
@@ -42,6 +42,13 @@ const MarketSignalsSection = ({ signals, industryBrief }: MarketSignalsSectionPr
           Recent signals ranked by source engagement; prediction markets show trading volume
         </p>
       </motion.div>
+
+      {signals.totalSignals === 0 && <p className="text-sm text-muted-foreground">No matching market signals were collected.</p>}
+      <ul className="text-xs text-muted-foreground space-y-1" aria-label="Market source status">
+        {signals.sourceBreakdown.map(source => <li key={source.source}>
+          {SOURCE_LABELS[source.source]?.label || source.source}: {source.count} signals — {source.status.replace(/_/g, ' ')}{source.error ? `: ${source.error}` : ''}
+        </li>)}
+      </ul>
 
       {/* Industry Brief */}
       {brief && (
