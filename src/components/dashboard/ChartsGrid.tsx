@@ -78,8 +78,11 @@ const ChartsGrid = ({ data }: ChartsGridProps) => (
               <div>
                 <div className="text-sm font-medium text-foreground">{c.name}</div>
                 <div className="text-xs text-muted-foreground">{c.weakness}</div>
+                {c.evidence?.length ? <details className="mt-2 text-xs"><summary>Supporting evidence ({c.evidence.length})</summary>
+                  {c.evidence.map(e => <p key={e.id} className="mt-2">{e.text} {e.url && /^https?:\/\//i.test(e.url) && <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">Source</a>}</p>)}
+                </details> : null}
               </div>
-              <div className="text-sm font-mono text-accent">{c.sentiment}/5</div>
+              <div className="text-sm font-mono text-accent">{c.ratingCount === 0 ? 'Unrated' : `${c.sentiment.toFixed(1)}/5`}</div>
             </div>
           ))
         ) : (

@@ -26,6 +26,8 @@ export interface CompetitorIntel {
   name: string;
   weakness: string;
   sentiment: number;
+  ratingCount?: number;
+  evidence?: { id: string; source: string; text: string; url?: string; timestamp?: string }[];
 }
 
 export interface OpportunityScore {

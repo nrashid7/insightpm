@@ -22,6 +22,21 @@ export async function runAnalysis(input: AnalysisRequest, context: { supabase: S
   const collected = await collectFeedback(validated);
   if (!collected.items.length) throw new NoEvidenceError(collected.sourceBreakdown);
   const result = summarizeEvidence(validated.productName, collected.items, collected.sourceBreakdown, validated.days);
+  const competitorNames = [...new Set((validated.competitors || '').split(',').map(name => name.trim()).filter(Boolean))].slice(0, 3);
+  for (const name of competitorNames) {
+    const competitorSources = validated.sources?.filter(source => source !== 'custom');
+    if (!competitorSources?.length) {
+      result.warnings.push(`No public sources selected for competitor ${name}; submitted feedback is not reused for competitors.`);
+      continue;
+    }
+    const comparison = await collectFeedback({ productName: name, sources: competitorSources, days: validated.days });
+    if (!comparison.items.length) {
+      result.warnings.push(`No matching evidence was collected for competitor ${name}.`);
+      continue;
+    }
+    const summary = summarizeEvidence(name, comparison.items, comparison.sourceBreakdown, validated.days);
+    result.competitors.push({ name, weakness: summary.complaints[0]?.name || 'No explicit complaint phrase found in the collected sample.', sentiment: summary.avgSentiment, ratingCount: summary.ratingCount, evidence: summary.evidence });
+  }
   // Keep all measurements deterministic even when an optional model interprets evidence.
   if (Deno.env.get('OPENROUTER_API_KEY')?.trim()) {
     try {

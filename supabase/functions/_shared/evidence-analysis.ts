@@ -44,7 +44,7 @@ export function summarizeEvidence(productName: string, items: EvidenceItem[], st
     ratingCount: ratings.length, sourcesCount: new Set(evidence.map(e => e.source)).size,
     complaints, featureRequests, topComplaintsCount: complaints.length, topFeatureRequestCount: featureRequests.length,
     sentiment, trendData: [...months].sort(([a], [b]) => a.localeCompare(b)).map(([month, requests]) => ({ month, requests })),
-    competitors: [], aiRecommendation: 'Review the linked evidence and validate recurring requests with customers before prioritizing changes.',
+    competitors: [] as { name: string; weakness: string; sentiment: number; ratingCount?: number; evidence?: typeof evidence }[], aiRecommendation: 'Review the linked evidence and validate recurring requests with customers before prioritizing changes.',
     evidence, sourceBreakdown: statuses, feedbackSamples: retained.slice(0, 30), warnings, researchWindow: { days, from, to },
   };
 }
