@@ -94,7 +94,15 @@ const DashboardContent = () => {
       setCurrentAnalysisId(row.id);
       setIsPublic((row as unknown as { is_public?: boolean }).is_public ?? false);
       setIsSaved(true);
-      setAnalysisInput({ productName: row.product_name, website: row.website || undefined, competitors: row.competitors || undefined });
+      const savedResult = row.results as unknown as AnalysisResult;
+      setAnalysisInput({
+        productName: row.product_name, website: row.website || undefined, competitors: row.competitors || undefined,
+        sources: savedResult.sourceBreakdown?.map(source => source.source),
+        customFeedback: savedResult.evidence?.filter(item => item.source === 'custom').map(item => item.text).join('\n') || undefined,
+        days: savedResult.researchWindow?.days ?? 30,
+        includeMarketSignals: Boolean(savedResult.marketSignals),
+        marketSignalSources: savedResult.marketSignals?.sourceBreakdown.map(source => source.source),
+      });
     }
     setIsLoading(false);
   };
