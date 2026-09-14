@@ -11,9 +11,16 @@ export interface AnalysisRequest {
   includeMarketSignals?: boolean; marketSignalSources?: string[];
 }
 
+export class NoEvidenceError extends Error {
+  constructor(public sourceBreakdown: Awaited<ReturnType<typeof collectFeedback>>['sourceBreakdown']) {
+    super('No evidence was found in the selected research window. Try another source, confirm the product website, or paste feedback.');
+  }
+}
+
 export async function runAnalysis(input: AnalysisRequest, context: { supabase: SupabaseClient; userId: string; monitoring?: boolean }) {
   const validated = validateAnalyzeInput(input);
   const collected = await collectFeedback(validated);
+  if (!collected.items.length) throw new NoEvidenceError(collected.sourceBreakdown);
   const result = summarizeEvidence(validated.productName, collected.items, collected.sourceBreakdown, validated.days);
   // Keep all measurements deterministic even when an optional model interprets evidence.
   if (Deno.env.get('OPENROUTER_API_KEY')?.trim()) {

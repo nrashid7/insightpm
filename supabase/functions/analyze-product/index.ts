@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCors } from '../_shared/cors.ts';
 import { validateAnalyzeInput, ValidationError } from '../_shared/validation.ts';
 import { checkDbRateLimit } from '../_shared/db-rate-limit.ts';
-import { runAnalysis } from '../_shared/analyze-engine.ts';
+import { runAnalysis, NoEvidenceError } from '../_shared/analyze-engine.ts';
 
 serve(async req => {
   const cors = handleCors(req);
@@ -29,6 +29,7 @@ serve(async req => {
     return reply(await runAnalysis(input, { supabase, userId: user.id }));
   } catch (error) {
     if (error instanceof ValidationError) return reply({ error: error.message }, 400);
+    if (error instanceof NoEvidenceError) return reply({ error: error.message, sourceBreakdown: error.sourceBreakdown }, 422);
     const message = error instanceof Error ? error.message : '';
     if (message.startsWith('No evidence')) return reply({ error: message }, 422);
     if (message.startsWith('Monthly analysis limit')) return reply({ error: message }, 429);
