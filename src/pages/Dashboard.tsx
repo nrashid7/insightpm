@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { useSubscription } from "@/hooks/useSubscription";
 import { motion } from "framer-motion";
@@ -8,10 +8,11 @@ import {
   Zap, Search, Save, Download, History, Share2, FileText, LogOut,
   AlertTriangle, RefreshCw, Bell,
 } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { analyzeProduct } from "@/lib/api/analyze";
 import { trackEvent } from "@/lib/analytics";
-import type { AnalysisResult } from "@/lib/types/analysis";
+import type { AnalysisInput, AnalysisResult } from "@/lib/types/analysis";
+import { BILLING_ENABLED } from "@/lib/product-config";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,13 +22,16 @@ import AnalysisResultsView from "@/components/dashboard/AnalysisResultsView";
 
 const DashboardContent = () => {
   const [searchParams] = useSearchParams();
-  const { isActive, analysesRemaining } = useSubscription();
-  const initialProduct = searchParams.get("product") || "";
-  const initialWebsite = searchParams.get("website") || "";
-  const initialCompetitors = searchParams.get("competitors") || "";
+  const location = useLocation();
+  const navigate = useNavigate();
+  const draft = (location.state as { analysisInput?: AnalysisInput } | null)?.analysisInput;
+  const { isActive, analysesRemaining, loading: accessLoading, error: accessError, refresh } = useSubscription();
+  const initialProduct = draft?.productName || searchParams.get("product") || "";
+  const initialWebsite = draft?.website || "";
+  const initialCompetitors = draft?.competitors || "";
   const initialSources = searchParams.get("sources") || "";
-  const initialCustomFeedback = searchParams.get("customFeedback") || "";
-  const initialMarketSignals = searchParams.get("marketSignals") !== "false";
+  const initialCustomFeedback = draft?.customFeedback || "";
+  const initialMarketSignals = draft?.includeMarketSignals ?? false;
   const initialMarketSources = searchParams.get("marketSources") || "";
   const paramAnalysisId = searchParams.get("analysisId") || "";
 
@@ -41,26 +45,36 @@ const DashboardContent = () => {
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [isAddingMonitor, setIsAddingMonitor] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const startedRequest = useRef("");
+  const savedByThisPage = useRef("");
+  const runInFlight = useRef(false);
+  const [analysisInput, setAnalysisInput] = useState<AnalysisInput | null>(draft || null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
   useEffect(() => {
     if (paramAnalysisId) {
+      if (savedByThisPage.current === paramAnalysisId || startedRequest.current === paramAnalysisId) return;
+      startedRequest.current = paramAnalysisId;
       loadSavedAnalysis(paramAnalysisId);
     } else if (initialProduct) {
+      if (accessLoading) return;
+      const requestKey = location.key + initialProduct;
+      if (startedRequest.current === requestKey) return;
+      startedRequest.current = requestKey;
       if (!isActive) {
-        setError("An active subscription is required to run analyses.");
+        setError(accessError || (BILLING_ENABLED ? "An active subscription is required to run analyses." : "Could not verify beta access. Please reload and try again."));
         return;
       }
       if (analysesRemaining <= 0) {
-        setError("Monthly analysis limit reached. Upgrade your plan to continue.");
+        setError("Monthly analysis limit reached. Please try again next month.");
         return;
       }
-      const sources = initialSources ? initialSources.split(",") : undefined;
-      const mktSources = initialMarketSources ? initialMarketSources.split(",") : undefined;
+      const sources = draft?.sources ?? (initialSources ? initialSources.split(",") : undefined);
+      const mktSources = draft?.marketSignalSources ?? (initialMarketSources ? initialMarketSources.split(",") : undefined);
       runAnalysis(initialProduct, initialWebsite, initialCompetitors, sources, initialCustomFeedback || undefined, initialMarketSignals, mktSources);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [paramAnalysisId, initialProduct, accessLoading, isActive, analysesRemaining, location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadSavedAnalysis = async (id: string) => {
     setIsLoading(true);
@@ -80,25 +94,24 @@ const DashboardContent = () => {
       setCurrentAnalysisId(row.id);
       setIsPublic((row as unknown as { is_public?: boolean }).is_public ?? false);
       setIsSaved(true);
+      setAnalysisInput({ productName: row.product_name, website: row.website || undefined, competitors: row.competitors || undefined });
     }
     setIsLoading(false);
   };
 
   const runAnalysis = async (name: string, website?: string, competitors?: string, sources?: string[], customFeedback?: string, includeMarketSignals?: boolean, marketSignalSources?: string[]) => {
+    if (runInFlight.current) return;
+    runInFlight.current = true;
     setIsLoading(true);
     setError(null);
     setIsSaved(false);
     setCurrentAnalysisId("");
+    setIsPublic(false);
+    setData(null);
+    const input: AnalysisInput = { productName: name, website: website || undefined, competitors: competitors || undefined, sources, customFeedback, includeMarketSignals, marketSignalSources, days: draft?.days ?? 30 };
+    setAnalysisInput(input);
     try {
-      const result = await analyzeProduct({
-        productName: name,
-        website: website || undefined,
-        competitors: competitors || undefined,
-        sources,
-        customFeedback,
-        includeMarketSignals,
-        marketSignalSources,
-      });
+      const result = await analyzeProduct(input);
       setData(result);
       trackEvent("analysis_complete", { product: result.productName, sources: result.sourcesCount });
       setProductName(result.productName);
@@ -107,7 +120,10 @@ const DashboardContent = () => {
       if (result.analysisId) {
         setCurrentAnalysisId(result.analysisId);
         setIsSaved(true);
+        savedByThisPage.current = result.analysisId;
+        navigate(`/dashboard?analysisId=${result.analysisId}`, { replace: true, state: null });
       }
+      void refresh?.();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Analysis failed";
       setError(msg);
@@ -115,6 +131,7 @@ const DashboardContent = () => {
       toast({ title: "Analysis failed", description: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
+      runInFlight.current = false;
     }
   };
 
@@ -127,8 +144,8 @@ const DashboardContent = () => {
     const { data: inserted, error: err } = await supabase.from("analyses").insert([{
       user_id: user.id,
       product_name: data.productName,
-      website: initialWebsite || null,
-      competitors: initialCompetitors || null,
+      website: analysisInput?.website || null,
+      competitors: analysisInput?.competitors || null,
       results: JSON.parse(JSON.stringify(data)),
     }]).select("id").single();
     if (err) {
@@ -136,6 +153,8 @@ const DashboardContent = () => {
     } else {
       setIsSaved(true);
       setCurrentAnalysisId(inserted.id);
+      savedByThisPage.current = inserted.id;
+      navigate(`/dashboard?analysisId=${inserted.id}`, { replace: true, state: null });
       trackEvent("analysis_saved", { product: data.productName });
       toast({ title: "Analysis saved!" });
     }
@@ -157,8 +176,12 @@ const DashboardContent = () => {
     trackEvent("analysis_shared", { product: data?.productName || "", public: newPublic });
     if (newPublic) {
       const url = `${window.location.origin}/share/${currentAnalysisId}`;
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copied!", description: "Anyone with the link can view this analysis." });
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link copied!", description: "Anyone with the link can view this analysis." });
+      } catch {
+        toast({ title: "Sharing enabled", description: url });
+      }
     } else {
       toast({ title: "Sharing disabled", description: "This analysis is now private." });
     }
@@ -214,13 +237,21 @@ const DashboardContent = () => {
     setIsReanalyzing(true);
     try {
       const result = await analyzeProduct({
+        ...analysisInput,
         productName: data.productName,
-        website: initialWebsite || undefined,
-        competitors: initialCompetitors || undefined,
+        includeMarketSignals: analysisInput?.includeMarketSignals ?? false,
         useCache: true,
       });
       setData(result);
-      toast({ title: "Re-analysis complete", description: "Used cached data for faster results." });
+      setCurrentAnalysisId(result.analysisId || "");
+      setIsSaved(!!result.analysisId);
+      setIsPublic(false);
+      if (result.analysisId) {
+        savedByThisPage.current = result.analysisId;
+        navigate(`/dashboard?analysisId=${result.analysisId}`, { replace: true, state: null });
+      }
+      void refresh?.();
+      toast({ title: "Re-analysis complete", description: "A new analysis was saved." });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Re-analysis failed";
       toast({ title: "Re-analysis failed", description: msg, variant: "destructive" });
@@ -252,8 +283,8 @@ const DashboardContent = () => {
     const { error: err } = await supabase.from("monitored_products").insert({
       user_id: user.id,
       product_name: data.productName,
-      website: initialWebsite || null,
-      competitors: initialCompetitors || null,
+      website: analysisInput?.website || null,
+      competitors: analysisInput?.competitors || null,
       frequency: "daily",
       next_run_at: nextRun.toISOString(),
     });
@@ -268,15 +299,16 @@ const DashboardContent = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (accessLoading || isLoading || isReanalyzing) return;
     if (!productName.trim()) return;
     if (!isActive) {
       setError("An active subscription is required to run analyses.");
-      toast({ title: "Subscription required", description: "Choose a plan on the pricing page.", variant: "destructive" });
+      toast({ title: "Access unavailable", description: accessError || "Please reload and try again.", variant: "destructive" });
       return;
     }
     if (analysesRemaining <= 0) {
-      setError("Monthly analysis limit reached. Upgrade your plan to continue.");
-      toast({ title: "Limit reached", description: "Upgrade your plan to run more analyses.", variant: "destructive" });
+      setError("Monthly analysis limit reached. Please try again next month.");
+      toast({ title: "Limit reached", description: "Your monthly analysis allowance has been used.", variant: "destructive" });
       return;
     }
     runAnalysis(productName.trim());
@@ -320,7 +352,7 @@ const DashboardContent = () => {
       </header>
 
       <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {isLoading && <AnalysisProgress productName={productName} />}
+        {(isLoading || (accessLoading && !!initialProduct)) && <AnalysisProgress productName={productName} />}
 
         {error && !isLoading && (
           <div className="text-center py-20">
@@ -340,7 +372,7 @@ const DashboardContent = () => {
           </div>
         )}
 
-        {data && !isLoading && (
+        {data && !isLoading && !error && (
           <>
             <motion.div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
@@ -363,9 +395,9 @@ const DashboardContent = () => {
                 </Button>
                 {isSaved && !!user && (
                   <>
-                    <Button variant="outline" size="sm" onClick={handleReanalyze} disabled={isReanalyzing} title="Re-run analysis using recently cached feedback data for faster results">
+                    <Button variant="outline" size="sm" onClick={handleReanalyze} disabled={isReanalyzing} title="Run a new analysis">
                       <RefreshCw className={`w-4 h-4 mr-1 ${isReanalyzing ? "animate-spin" : ""}`} />
-                      {isReanalyzing ? "Re-analyzing..." : "Re-analyze (cached)"}
+                      {isReanalyzing ? "Re-analyzing..." : "Re-analyze"}
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleAddToMonitoring} disabled={isAddingMonitor}>
                       <Bell className="w-4 h-4 mr-1" />

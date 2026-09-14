@@ -76,6 +76,12 @@ describe("Monitor page", () => {
     });
   });
 
+  it("does not redirect while the session is still loading", () => {
+    vi.mocked(useAuth).mockReturnValue({ user: null, session: null, loading: true, signOut: vi.fn() });
+    renderMonitor();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it("shows empty state when no products are monitored", async () => {
     (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({
       user: { id: "user-1", email: "test@example.com" },

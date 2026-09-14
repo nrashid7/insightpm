@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, Menu, LogOut, History, Bell, CreditCard, Settings } from "lucide-react";
 import { openBillingPortal } from "@/lib/api/billing";
+import { BILLING_ENABLED } from "@/lib/product-config";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { useToast } from "@/hooks/use-toast";
@@ -99,7 +100,7 @@ const Navbar = () => {
                   <Button variant="hero" size="sm">Subscribe</Button>
                 </a>
               )}
-              {isActive && (
+              {BILLING_ENABLED && isActive && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -180,7 +181,7 @@ const Navbar = () => {
                           <Button variant="hero" size="sm" className="w-full">Subscribe</Button>
                         </a>
                       )}
-                      {isActive && (
+                      {BILLING_ENABLED && isActive && (
                         <Button
                           variant="ghost"
                           size="sm"

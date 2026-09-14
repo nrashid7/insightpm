@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 -- pg_cron runs in the database context; we use pg_net to invoke the Edge Function
 SELECT cron.schedule(
   'run-monitoring-hourly',
-  '0 * * * *',  -- every hour at minute 0
+  '0 * * * *',
   $$
   SELECT net.http_post(
     url := current_setting('app.settings.supabase_url') || '/functions/v1/run-monitoring',
@@ -23,7 +23,7 @@ SELECT cron.schedule(
 -- that are not linked to a persisted analysis
 SELECT cron.schedule(
   'cleanup-old-feedback',
-  '0 3 * * 0',  -- every Sunday at 3 AM
+  '0 3 * * 0',
   $$
   DELETE FROM public.feedback_items
   WHERE collected_at < NOW() - INTERVAL '90 days'

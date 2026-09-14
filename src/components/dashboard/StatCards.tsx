@@ -9,7 +9,7 @@ interface StatCardsProps {
 const StatCards = ({ data }: StatCardsProps) => {
   const stats = [
     { icon: MessageSquare, label: "Total Feedback", value: data.totalFeedback.toLocaleString(), color: "text-primary" },
-    { icon: Star, label: "Avg Sentiment", value: `${data.avgSentiment}/5`, color: "text-accent" },
+    { icon: Star, label: "Average rating", value: data.ratingCount === 0 ? "Not available" : `${data.avgSentiment.toFixed(1)}/5`, color: "text-accent" },
     { icon: TrendingDown, label: "Top Complaints", value: data.topComplaintsCount.toLocaleString(), color: "text-destructive" },
     { icon: TrendingUp, label: "Feature Requests", value: data.topFeatureRequestCount.toLocaleString(), color: "text-chart-4" },
   ];

@@ -1,6 +1,3 @@
--- Launch hardening: restrict service UPDATE policies and enforce monitor plan limits
-
--- feedback_items: replace permissive public UPDATE with service_role only
 DROP POLICY IF EXISTS "Service can update feedback" ON public.feedback_items;
 
 CREATE POLICY "Service role can update feedback"
@@ -10,7 +7,6 @@ CREATE POLICY "Service role can update feedback"
   USING (true)
   WITH CHECK (true);
 
--- monitored_products: replace permissive UPDATE with service_role only
 DROP POLICY IF EXISTS "Service can update monitored products" ON public.monitored_products;
 
 CREATE POLICY "Service role can update monitored products"
@@ -20,7 +16,6 @@ CREATE POLICY "Service role can update monitored products"
   USING (true)
   WITH CHECK (true);
 
--- Server-side monitor plan limits on insert
 CREATE OR REPLACE FUNCTION public.check_monitor_limit()
 RETURNS TRIGGER
 LANGUAGE plpgsql

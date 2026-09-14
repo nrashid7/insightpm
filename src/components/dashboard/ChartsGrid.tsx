@@ -27,8 +27,8 @@ const ChartsGrid = ({ data }: ChartsGridProps) => (
     {/* Sentiment */}
     <motion.div className="rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
       <h3 className="text-sm font-semibold text-foreground mb-1">Sentiment Breakdown</h3>
-      <p className="text-xs text-muted-foreground mb-4">Overall sentiment distribution</p>
-      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
+      <p className="text-xs text-muted-foreground mb-4">{data.ratingCount !== undefined ? 'Distribution of collected star ratings' : 'Overall sentiment distribution'}</p>
+      {data.ratingCount === 0 ? <p className="text-sm text-muted-foreground">No star ratings were collected. Sentiment is unmeasured.</p> : <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
         <ResponsiveContainer width={160} height={160}>
           <PieChart>
             <Pie data={data.sentiment} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={70} strokeWidth={0}>
@@ -41,19 +41,20 @@ const ChartsGrid = ({ data }: ChartsGridProps) => (
             <div key={s.name} className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full" style={{ background: s.color }} />
               <span className="text-sm text-muted-foreground">{s.name}</span>
-              <span className="text-sm font-semibold text-foreground ml-auto">{s.value}%</span>
+              <span className="text-sm font-semibold text-foreground ml-auto">{data.ratingCount !== undefined ? `${s.value} ratings` : `${s.value}%`}</span>
             </div>
           ))}
         </div>
-      </div>
+      </div>}
     </motion.div>
 
     {/* Trend */}
     <motion.div className="rounded-xl border border-border bg-card/50 p-4 sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
       <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
-        <TrendingUp className="w-4 h-4 text-chart-4" /> Feature Request Trend
+        <TrendingUp className="w-4 h-4 text-chart-4" /> Dated Feedback
       </h3>
-      <p className="text-xs text-muted-foreground mb-4">Monthly request volume</p>
+      <p className="text-xs text-muted-foreground mb-4">Collected items by publication month; sampling is not a market-wide trend.</p>
+      {!data.trendData.length && <p className="text-sm text-muted-foreground">No publication dates available.</p>}
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={data.trendData}>
           <XAxis dataKey="month" tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 12 }} axisLine={false} tickLine={false} />

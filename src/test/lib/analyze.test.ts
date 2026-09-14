@@ -51,6 +51,14 @@ describe("analyzeProduct", () => {
     await expect(analyzeProduct({ productName: "Fail" })).rejects.toThrow("Server error");
   });
 
+  it("preserves actionable HTTP response errors from the Supabase SDK", async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({ data: null, error: {
+      message: "Edge Function returned a non-2xx status code",
+      context: new Response(JSON.stringify({ error: "No relevant evidence found. Try another source." }), { status: 422 }),
+    } as any });
+    await expect(analyzeProduct({ productName: "Unknown" })).rejects.toThrow("No relevant evidence found");
+  });
+
   it("throws when data contains error field", async () => {
     vi.mocked(supabase.functions.invoke).mockResolvedValueOnce({
       data: { error: "productName is required" },

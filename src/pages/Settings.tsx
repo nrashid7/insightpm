@@ -11,6 +11,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { openBillingPortal } from "@/lib/api/billing";
 import { useToast } from "@/hooks/use-toast";
 import { RequireAuth } from "@/components/RequireAuth";
+import { BILLING_ENABLED } from "@/lib/product-config";
 
 const SettingsContent = () => {
   const { user, signOut } = useAuth();
@@ -46,7 +47,7 @@ const SettingsContent = () => {
       <main className="container mx-auto px-6 pt-24 pb-16 max-w-lg">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl font-bold text-foreground mb-2">Account settings</h1>
-          <p className="text-muted-foreground text-sm mb-8">Manage your profile and subscription.</p>
+          <p className="text-muted-foreground text-sm mb-8">Review your account and analysis allowance.</p>
 
           <div className="space-y-6">
             <div className="rounded-xl border border-border p-5 space-y-4">
@@ -70,7 +71,7 @@ const SettingsContent = () => {
             </div>
 
             <div className="rounded-xl border border-border p-5 space-y-3">
-              <h2 className="text-sm font-semibold text-foreground">Subscription</h2>
+              <h2 className="text-sm font-semibold text-foreground">{BILLING_ENABLED ? 'Subscription' : 'Beta access'}</h2>
               {isActive && limits ? (
                 <p className="text-sm text-muted-foreground">
                   {limits.label} plan — {analysesUsed} of {limits.analysesPerMonth} analyses used this period.
@@ -78,7 +79,7 @@ const SettingsContent = () => {
               ) : (
                 <p className="text-sm text-muted-foreground">No active subscription.</p>
               )}
-              <div className="flex flex-wrap gap-2">
+              {BILLING_ENABLED && <div className="flex flex-wrap gap-2">
                 {isActive ? (
                   <Button variant="outline" size="sm" onClick={handleBilling} disabled={portalLoading}>
                     <CreditCard className="w-4 h-4 mr-1" />
@@ -89,8 +90,8 @@ const SettingsContent = () => {
                     <Button variant="hero" size="sm">View plans</Button>
                   </Link>
                 )}
-              </div>
-              {plan && <p className="text-xs text-muted-foreground">Current plan: {plan}</p>}
+              </div>}
+              {BILLING_ENABLED && plan && <p className="text-xs text-muted-foreground">Current plan: {plan}</p>}
             </div>
 
             <div className="rounded-xl border border-border p-5 space-y-3">

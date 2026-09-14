@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { RequireSubscription } from "@/components/RequireSubscription";
+vi.mock("@/lib/product-config", () => ({ BILLING_ENABLED: true }));
 
 vi.mock("@/hooks/useSubscription", () => ({
   useSubscription: vi.fn(),

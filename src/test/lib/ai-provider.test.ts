@@ -13,7 +13,7 @@ let denoEnv: Record<string, string>;
 beforeEach(() => {
   denoEnv = {
     OPENROUTER_API_KEY: "test-openrouter-key",
-    SITE_URL: "https://sigyn-kohl.vercel.app",
+    SITE_URL: "https://insightpm-pi.vercel.app",
   };
   (globalThis as any).Deno = { env: { get: (key: string) => denoEnv[key] } };
 });
@@ -46,12 +46,12 @@ describe("openRouterChatCompletion", () => {
     expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
     expect(init.method).toBe("POST");
     expect(init.headers.Authorization).toBe("Bearer test-openrouter-key");
-    expect(init.headers["HTTP-Referer"]).toBe("https://sigyn-kohl.vercel.app");
+    expect(init.headers["HTTP-Referer"]).toBe("https://insightpm-pi.vercel.app");
     expect(init.headers["X-Title"]).toBe("InsightPM");
     expect(JSON.parse(init.body).model).toBe(ANALYZE_MODEL);
   });
 
-  it("defaults HTTP-Referer to sigyn-kohl when SITE_URL is unset", async () => {
+  it("defaults HTTP-Referer to insightpm-pi when SITE_URL is unset", async () => {
     delete denoEnv.SITE_URL;
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -59,7 +59,7 @@ describe("openRouterChatCompletion", () => {
     await openRouterChatCompletion({ model: CLASSIFY_MODEL, messages: [] });
 
     const [, init] = fetchMock.mock.calls[0];
-    expect(init.headers["HTTP-Referer"]).toBe("https://sigyn-kohl.vercel.app");
+    expect(init.headers["HTTP-Referer"]).toBe("https://insightpm-pi.vercel.app");
   });
 });
 

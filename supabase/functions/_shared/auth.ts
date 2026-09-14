@@ -39,6 +39,11 @@ export function isServiceRoleRequest(req: Request): boolean {
   return secretsMatch(bearerToken(req), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
 }
 
+export function verifyMonitoringRequest(req: Request): void {
+  if (isServiceRoleRequest(req) || secretsMatch(req.headers.get('x-monitoring-secret'), Deno.env.get('MONITORING_SECRET'))) return;
+  throw new UnauthorizedError('Unauthorized monitoring request');
+}
+
 export function isInternalMonitoringRequest(req: Request): boolean {
   if (!isServiceRoleRequest(req)) return false;
   return secretsMatch(req.headers.get("x-internal-secret"), Deno.env.get("INTERNAL_FUNCTION_SECRET"));

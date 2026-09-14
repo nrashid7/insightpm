@@ -34,6 +34,9 @@ export interface ValidatedAnalyzeInput {
   sources?: string[];
   useCache?: boolean;
   customFeedback?: string;
+  days?: number;
+  includeMarketSignals?: boolean;
+  marketSignalSources?: string[];
 }
 
 export function validateAnalyzeInput(body: unknown): ValidatedAnalyzeInput {
@@ -56,6 +59,22 @@ export function validateAnalyzeInput(body: unknown): ValidatedAnalyzeInput {
   if (isString(b.website) && b.website.length > MAX_WEBSITE_LENGTH) {
     throw new ValidationError(`website must be at most ${MAX_WEBSITE_LENGTH} characters`);
   }
+  if (isString(b.website) && b.website.trim()) {
+    let url: URL;
+    try { url = new URL(b.website.includes('://') ? b.website : `https://${b.website}`); }
+    catch { throw new ValidationError('website must be a public HTTP or HTTPS URL'); }
+    const host = url.hostname.toLowerCase();
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password ||
+      !host.includes('.') || host.endsWith('.localhost') || host.endsWith('.local') ||
+      /^\[|^(?:0|10|127|169\.254|192\.168)\./.test(host) || /^172\.(?:1[6-9]|2\d|3[01])\./.test(host)) {
+      throw new ValidationError('website must be a public HTTP or HTTPS URL');
+    }
+  }
+  if (b.days !== undefined && (!Number.isInteger(b.days) || Number(b.days) < 1 || Number(b.days) > 90)) {
+    throw new ValidationError('days must be an integer between 1 and 90');
+  }
+  if (!isOptionalBoolean(b.includeMarketSignals)) throw new ValidationError('includeMarketSignals must be a boolean');
+  if (b.marketSignalSources !== undefined) validateMarketSignalsInput({ topic: b.productName, sources: b.marketSignalSources });
 
   if (!isOptionalString(b.competitors)) {
     throw new ValidationError("competitors must be a string");
@@ -90,7 +109,10 @@ export function validateAnalyzeInput(body: unknown): ValidatedAnalyzeInput {
     productName: b.productName.trim(),
     website: isString(b.website) ? b.website.trim() : undefined,
     competitors: isString(b.competitors) ? b.competitors.trim() : undefined,
-    sources: Array.isArray(b.sources) ? b.sources as string[] : undefined,
+    sources: Array.isArray(b.sources) ? [...new Set(b.sources as string[])] : isString(b.customFeedback) && b.customFeedback.trim() ? ['custom'] : ['hackernews', 'github', 'stackoverflow', 'appstore'],
+    days: typeof b.days === 'number' ? b.days : 30,
+    includeMarketSignals: b.includeMarketSignals === true,
+    marketSignalSources: Array.isArray(b.marketSignalSources) ? [...new Set(b.marketSignalSources as string[])] : undefined,
     useCache: typeof b.useCache === "boolean" ? b.useCache : undefined,
     customFeedback: isString(b.customFeedback) ? b.customFeedback : undefined,
   };
