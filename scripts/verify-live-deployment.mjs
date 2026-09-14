@@ -26,7 +26,8 @@ if (!baseUrl || !anonKey) {
 }
 
 /** Functions the browser calls directly, so their CORS origin must echo back. */
-const BROWSER_FACING = ["analyze-product", "stripe-checkout", "stripe-portal"];
+const billingEnabled = process.env.BILLING_ENABLED === "true" || process.env.VITE_BILLING_ENABLED === "true";
+const BROWSER_FACING = ["analyze-product", ...(billingEnabled ? ["stripe-checkout", "stripe-portal"] : [])];
 
 /** Functions called server-to-server behind the internal shared secret. */
 const INTERNAL_SECRET_FUNCTIONS = ["collect-feedback", "classify-feedback", "collect-market-signals"];
@@ -99,8 +100,8 @@ await checkRejectsWithStatus(
   "run-monitoring rejects a non-service-role caller with 401",
 );
 
-console.log("\nStripe webhook secret:");
-{
+if (billingEnabled) {
+  console.log("\nStripe webhook secret:");
   const response = await fetch(`${baseUrl}/functions/v1/stripe-webhook`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
